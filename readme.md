@@ -1,0 +1,3 @@
+## MemberMocker: Creating mock-membership data for testing and sharing, no PII shared
+
+Want to test your app / build a code library / run you AI project on a set of membership data that matches your real membership base but doesn't leak any personally identifiable information (PII)? Then you've come to the right place! MemberMocker can create synthetic membership data that is similar in the types of data (names, adresses, contact info, membership class, etc.) as your real data. MemberMocker can currently produce mock-membership data for organisations based in Denmark. 
