@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { generateMembers } from '../services/api';
 
 export default function MemberForm({ onGenerate }) {
+  const [isLoading, setIsLoading] = useState(false);
   const [config, setConfig] = useState({
     city: 'Copenhagen',
     country: 'Denmark',
@@ -22,12 +23,15 @@ export default function MemberForm({ onGenerate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const members = await generateMembers(config);
       onGenerate(members);
     } catch (error) {
       console.error('Error generating members:', error);
       alert('Failed to generate members. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -98,9 +102,14 @@ export default function MemberForm({ onGenerate }) {
       </div>
       <button
         type="submit"
-        className="w-full py-2 px-4 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors"
+        disabled={isLoading}
+        className={`w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-colors ${
+          isLoading 
+            ? 'bg-blue-400 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500'
+        }`}
       >
-        Generate Members
+        {isLoading ? 'Generating Members...' : 'Generate Members'}
       </button>
     </form>
   );
