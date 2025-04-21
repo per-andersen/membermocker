@@ -18,7 +18,6 @@ export default function DataSetPage() {
       setError(null);
     } catch (error) {
       console.error('Error loading members:', error);
-      // Don't show error for empty table
       if (error.response?.status !== 404) {
         setError('Failed to load members. Please try again.');
       }
@@ -40,15 +39,15 @@ export default function DataSetPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-8">
-      <section>
-        <h2 className="text-xl font-bold mb-4">Generate New Members</h2>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <section className="rounded-xl overflow-hidden bg-gray-800 shadow-lg">
+        <h2 className="text-xl font-bold p-6 border-b border-gray-700">Generate New Members</h2>
         <MemberForm onGenerate={handleGenerate} />
       </section>
       
-      <section>
-        <h2 className="text-xl font-bold mb-4">Member List</h2>
-        {error && <div className="text-red-600 mb-4">{error}</div>}
+      <section className="rounded-xl overflow-hidden bg-gray-800 shadow-lg">
+        <h2 className="text-xl font-bold p-6 border-b border-gray-700">Member List</h2>
+        {error && <div className="text-red-400 px-6 py-4">{error}</div>}
         <MemberList 
           members={members}
           onMemberDeleted={handleMemberDeleted}
