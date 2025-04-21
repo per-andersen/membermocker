@@ -19,6 +19,7 @@ def create_members(config: MemberConfig):
 def list_members():
     db = get_db()
     result = db.execute("SELECT * FROM members").fetchall()
+    # Return empty list instead of error when no members exist
     return [
         Member(
             id=UUID(row[0]),
@@ -30,7 +31,7 @@ def list_members():
             email=row[6],
             address=row[7]
         )
-        for row in result
+        for row in (result or [])
     ]
 
 @router.get("/members/{member_id}", response_model=Member)
