@@ -3,9 +3,16 @@ import DataSetPage from './pages/DataSetPage';
 
 function App() {
   return (
-    <div className="max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold p-4">MemberMocker</h1>
-      <DataSetPage />
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">MemberMocker</h1>
+          <p className="mt-2 text-gray-600">Generate and manage mock membership data for testing</p>
+        </header>
+        <main>
+          <DataSetPage />
+        </main>
+      </div>
     </div>
   );
 }

@@ -1,12 +1,17 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import date
-
+from typing import List, Optional
+from uuid import UUID, uuid4
 
 class MemberConfig(BaseModel):
     city: str
     country: str
+    count: int = Field(default=1, ge=1, le=100)
+    min_age: int = Field(default=18, ge=0, le=120)
+    max_age: int = Field(default=90, ge=0, le=120)
 
 class Member(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
     date_member_joined_group: date
     first_name: str
     surname: str
@@ -14,3 +19,12 @@ class Member(BaseModel):
     phone_number: str
     email: str
     address: str
+
+class MemberUpdate(BaseModel):
+    date_member_joined_group: Optional[date] = None
+    first_name: Optional[str] = None
+    surname: Optional[str] = None
+    birthday: Optional[date] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
