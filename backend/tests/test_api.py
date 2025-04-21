@@ -103,19 +103,18 @@ def test_download_members():
         "country": "Denmark",
         "count": 2
     })
-    
+
     # Test CSV download
     response = client.get("/download/csv")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "text/csv"
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
     assert "content-disposition" in response.headers
-    
     # Test Excel download
     response = client.get("/download/excel")
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     assert "content-disposition" in response.headers
-    
+
     # Test invalid format
     response = client.get("/download/invalid")
     assert response.status_code == 400

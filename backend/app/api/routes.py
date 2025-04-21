@@ -5,7 +5,6 @@ from app.models.member import MemberConfig, Member, MemberUpdate
 from app.core.config import get_db
 from typing import List
 from uuid import UUID
-import pandas as pd
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 
@@ -22,7 +21,7 @@ def list_members():
     # Return empty list instead of error when no members exist
     return [
         Member(
-            id=UUID(row[0]),
+            id=row[0] if isinstance(row[0], UUID) else UUID(row[0]),
             date_member_joined_group=row[1],
             first_name=row[2],
             surname=row[3],
@@ -41,7 +40,7 @@ def get_member(member_id: UUID):
     if not result:
         raise HTTPException(status_code=404, detail="Member not found")
     return Member(
-        id=UUID(result[0]),
+        id=result[0] if isinstance(result[0], UUID) else UUID(result[0]),
         date_member_joined_group=result[1],
         first_name=result[2],
         surname=result[3],

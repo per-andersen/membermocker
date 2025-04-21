@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 class MemberConfig(BaseModel):
