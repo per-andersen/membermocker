@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import date
 
 
-class GroupMember(BaseModel):
+class MemberConfig(BaseModel):
     date_member_joined_group: date
     first_name: str
     surname: str
