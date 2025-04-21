@@ -3,6 +3,10 @@ from datetime import date
 
 
 class MemberConfig(BaseModel):
+    city: str
+    country: str
+
+class Member(BaseModel):
     date_member_joined_group: date
     first_name: str
     surname: str
