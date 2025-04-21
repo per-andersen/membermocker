@@ -1,16 +1,18 @@
 from ollama import chat
-from pydantic import BaseModel
-from datetime import date
+from faker import Faker
+from app.models.member import MemberConfig
 
+def generate_members(config: MemberConfig):
+    fake = Faker(config.country)
+    members = []
+    for _ in range(config.count):
+        members.append({
+            "name": fake.name(),
+            "email": fake.email(),
+            "address": fake.address()
+        })
+    return members
 
-class GroupMember(BaseModel):
-    date_member_joined_group: date
-    first_name: str
-    surname: str
-    birthday: date
-    phone_number: str
-    email: str
-    address: str
 
 def generate_fake_group_member():
     response = chat(
@@ -26,8 +28,3 @@ def generate_fake_group_member():
 
     group_member = GroupMember.model_validate_json(response.message.content)
     print(group_member)
-
-
-if __name__ == "__main__":
-    for ii in range(100):
-        generate_fake_group_member()
