@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A project to create fake SF member data that can be shared openly and used for code testing purposes."
 requires-python = ">=3.12"
 dependencies = [
+    "duckdb>=1.2.1",
     "ollama>=0.4.7",
     "pydantic>=2.10.6",
 ]
