@@ -17,7 +17,7 @@ def generate_fake_group_member():
         messages=[
             {
                 'role': 'user',
-                'content': 'Tell me about the data of this ficticious group member from the city of Copenhagen, Denmark.',
+                'content': 'Get the data for this ficticious group member from the city of Copenhagen, Denmark.',
             }
         ],
         model='llama3.1',
