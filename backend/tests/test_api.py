@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.config import get_db
 import pytest
-from datetime import date
 
 client = TestClient(app)
 

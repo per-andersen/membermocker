@@ -1,9 +1,7 @@
 from ollama import chat
-from faker import Faker
 from app.models.member import MemberConfig, Member
 from app.core.config import get_db
 from typing import List
-import json
 
 def generate_members(config: MemberConfig) -> List[Member]:
     members = []
