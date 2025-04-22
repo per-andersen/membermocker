@@ -1,5 +1,7 @@
 # MemberMocker
 
+<img src="frontend/public/assets/light_theme_logo.png" alt="MemberMocker Logo" width="200">
+
 Generate realistic mock membership data for testing and development purposes, with zero exposure of personally identifiable information (PII).
 
 ## Overview
