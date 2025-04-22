@@ -11,9 +11,8 @@ MemberMocker is a powerful tool designed for developers and organizations who ne
 ### Key Features
 
 - 🔒 Zero PII exposure - all data is synthetically generated
-- 🇩🇰 Specialized for Danish organization contexts
-- 🎯 Configurable data generation patterns
-- 📊 Realistic demographic distributions
+- 🇩🇰 Tested in depth for Danish use cases
+- 🌎 Can create membership data for most of the world
 - 🚀 Easy-to-use API and web interface
 
 ## Technologies Used
@@ -107,19 +106,30 @@ For detailed API documentation, visit the Swagger UI at http://localhost:8000/do
 
 ```
 membermocker/
-├── backend/               # Python FastAPI backend
+├── LICENSE
+├── prd.md              # Project Requirements Document
+├── readme.md
+├── backend/            # Python FastAPI backend
+│   ├── pyproject.toml  # Python project dependencies
+│   ├── uv.lock         # UV package lock file
 │   ├── app/
-│   │   ├── api/          # API routes
-│   │   ├── core/         # Core configurations
-│   │   ├── models/       # Data models
-│   │   └── services/     # Business logic
-│   └── tests/            # Backend tests
-└── frontend/             # React frontend
-    ├── src/
-    │   ├── components/   # Reusable UI components
-    │   ├── pages/        # Page components
-    │   └── services/     # API integration
-    └── public/           # Static assets
+│   │   ├── main.py    # Application entry point
+│   │   ├── api/       # API routes and endpoints
+│   │   ├── core/      # Core configurations
+│   │   ├── models/    # Data models and schemas
+│   │   └── services/  # Business logic
+│   ├── data/          # Database storage
+│   └── tests/         # Backend tests
+└── frontend/          # React frontend
+    ├── index.html     # HTML entry point
+    ├── vite.config.ts # Vite configuration
+    ├── public/        # Static assets
+    │   └── assets/    # Images and icons
+    └── src/
+        ├── components/  # Reusable UI components
+        ├── pages/      # Page components
+        ├── services/   # API integration
+        └── types/      # TypeScript type definitions
 ```
 
 ## Contributing
@@ -136,4 +146,4 @@ Copyright (c) 2025 Per Andersen. All rights reserved. See the LICENSE file for d
 
 ## Acknowledgments
 
-- Danish address data provided by [Danmarks Adresseregister](https://dawadocs.dataforsyningen.dk/)
+- Address data provided by [OpenStreetMap](https://www.openstreetmap.org/) © OpenStreetMap contributors
