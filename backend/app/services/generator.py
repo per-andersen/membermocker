@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 def generate_members(config: MemberConfig) -> List[Member]:
     """
-    Generates fictitious group members using the LLM.
+    Generates fictitious group members using llama3.1 and ollama.
     Args:
         config (MemberConfig): Configuration for generating members.
     Returns:
@@ -68,7 +68,7 @@ def get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, f
         List[Tuple[str, float, float]]: A list of tuples containing (address, latitude, longitude).
     """
     headers = {
-        'User-Agent': 'RealAddressFetcher/1.0 (youremail@example.com)'
+        'User-Agent': 'RealAddressFetcher/1.0 (realaddressfetcher@example.com)'
     }
 
     # Step 1: Query Nominatim directly with city and full country name

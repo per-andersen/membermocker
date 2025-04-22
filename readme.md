@@ -39,6 +39,7 @@ MemberMocker is a powerful tool designed for developers and organizations who ne
 - npm or yarn
 - Git
 - UV package installer (`pip install uv`)
+- Ollama with llama3.1
 
 ### Installation
 
@@ -62,13 +63,18 @@ npm install
 
 ### Running the Application
 
-1. Start the backend server:
+1. Start ollama:
+```bash
+ollama serve
+```
+
+2. Start the backend server:
 ```bash
 cd backend
 uvicorn app.main:app --reload
 ```
 
-2. Start the frontend development server:
+3. Start the frontend development server:
 ```bash
 cd frontend
 npm run dev
