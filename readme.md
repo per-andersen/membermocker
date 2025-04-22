@@ -10,7 +10,8 @@ MemberMocker is a powerful tool designed for developers and organizations who ne
 
 ### Key Features
 
-- 🔒 Zero PII exposure - all data is synthetically generated
+- 🔒 Zero PII exposure - all identifiable information is synthetically generated
+- 🎯 Real addresses with geocoordinates
 - 🇩🇰 Tested in depth for Danish use cases
 - 🌎 Can create membership data for most of the world
 - 🚀 Easy-to-use API and web interface
