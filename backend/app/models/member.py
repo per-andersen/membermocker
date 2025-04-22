@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional
+from typing import Optional, Dict
 from uuid import UUID, uuid4
 
 class MemberConfig(BaseModel):
@@ -21,6 +21,7 @@ class Member(BaseModel):
     address: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    custom_fields: Optional[Dict[str, str]] = None
 
 class MemberUpdate(BaseModel):
     date_member_joined_group: Optional[date] = None
@@ -32,3 +33,4 @@ class MemberUpdate(BaseModel):
     address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    custom_fields: Optional[Dict[str, str]] = None

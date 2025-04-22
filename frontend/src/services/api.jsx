@@ -44,3 +44,22 @@ export const downloadMembers = async (format) => {
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+export const createCustomField = async (fieldData) => {
+  const response = await API.post('/custom-fields', fieldData);
+  return response.data;
+};
+
+export const listCustomFields = async () => {
+  const response = await API.get('/custom-fields');
+  return response.data;
+};
+
+export const updateCustomField = async (id, data) => {
+  const response = await API.patch(`/custom-fields/${id}`, data);
+  return response.data;
+};
+
+export const deleteCustomField = async (id) => {
+  await API.delete(`/custom-fields/${id}`);
+};

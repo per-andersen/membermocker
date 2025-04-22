@@ -20,4 +20,25 @@ def get_db():
             longitude DOUBLE
         )
     """)
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS custom_field_definitions (
+            id UUID PRIMARY KEY,
+            name VARCHAR NOT NULL,
+            field_type VARCHAR NOT NULL,
+            validation_rules JSON,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS custom_field_values (
+            member_id UUID,
+            field_id UUID,
+            value VARCHAR,
+            PRIMARY KEY (member_id, field_id),
+            FOREIGN KEY (member_id) REFERENCES members(id),
+            FOREIGN KEY (field_id) REFERENCES custom_field_definitions(id)
+        )
+    """)
     return conn
