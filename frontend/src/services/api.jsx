@@ -31,11 +31,14 @@ export const downloadMembers = async (format) => {
     responseType: 'blob'
   });
   
+  // Map format to correct file extension
+  const extension = format.toLowerCase() === 'excel' ? 'xlsx' : format;
+  
   // Create a download link and trigger it
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `members.${format}`);
+  link.setAttribute('download', `members.${extension}`);
   document.body.appendChild(link);
   link.click();
   link.remove();
