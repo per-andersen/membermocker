@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.config import get_db
+from app.services.generator import get_real_addresses
 import pytest
 
 client = TestClient(app)
@@ -117,3 +118,18 @@ def test_download_members():
     # Test invalid format
     response = client.get("/download/invalid")
     assert response.status_code == 400
+
+
+def test_get_real_addresses():
+    # Test with a known city and country
+    city = "København"
+    country = "Danmark"
+    count = 10
+
+    addresses = get_real_addresses(city, country, count)
+    assert len(addresses) == count
+    for address in addresses:
+        assert "københavn" in address.lower()
+        assert "danmark" in address.lower()
+        
+    
