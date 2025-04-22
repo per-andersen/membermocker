@@ -28,7 +28,9 @@ def list_members():
             birthday=row[4],
             phone_number=row[5],
             email=row[6],
-            address=row[7]
+            address=row[7],
+            latitude=row[8],
+            longitude=row[9]
         )
         for row in (result or [])
     ]
@@ -47,7 +49,9 @@ def get_member(member_id: UUID):
         birthday=result[4],
         phone_number=result[5],
         email=result[6],
-        address=result[7]
+        address=result[7],
+        latitude=result[8],
+        longitude=result[9]
     )
 
 @router.patch("/members/{member_id}", response_model=Member)

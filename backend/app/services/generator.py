@@ -3,7 +3,7 @@ import requests
 from ollama import chat
 from app.models.member import MemberConfig, Member
 from app.core.config import get_db
-from typing import List
+from typing import List, Tuple
 
 def generate_members(config: MemberConfig) -> List[Member]:
     """
@@ -13,8 +13,11 @@ def generate_members(config: MemberConfig) -> List[Member]:
     Returns:
         List[Member]: A list of generated members.
     """
+    
+    addresses_with_coords = get_real_addresses(config.city, config.country, config.count)
+    
     members = []
-    for _ in range(config.count):
+    for i in range(config.count):
         response = chat(
             messages=[
                 {
@@ -27,14 +30,18 @@ def generate_members(config: MemberConfig) -> List[Member]:
         )
         
         member = Member.model_validate_json(response.message.content)
+        if i < len(addresses_with_coords):
+            address, lat, lon = addresses_with_coords[i]
+            member.address = address
+            member.latitude = lat
+            member.longitude = lon
         members.append(member)
     
-    # Store in database
     db = get_db()
     for member in members:
         db.execute("""
             INSERT INTO members 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
             str(member.id),
             member.date_member_joined_group,
@@ -43,23 +50,25 @@ def generate_members(config: MemberConfig) -> List[Member]:
             member.birthday,
             member.phone_number,
             member.email,
-            member.address
+            member.address,
+            member.latitude,
+            member.longitude
         ])
     
     return members
 
-def get_real_addresses(city: str, country: str, count: int) -> List[str]:
+def get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, float, float]]:
     """
-    Fetches real addresses from OpenStreetMap using Nominatim and Overpass API.
+    Fetches real addresses with coordinates from OpenStreetMap using Nominatim and Overpass API.
     Args:
         city (str): The city to search for.
         country (str): The country to search in.
         count (int): The number of addresses to fetch.
     Returns:
-        List[str]: A list of real addresses.
+        List[Tuple[str, float, float]]: A list of tuples containing (address, latitude, longitude).
     """
     headers = {
-        'User-Agent': 'RealAddressFetcher/1.0 (youremail@example.com)'  # Replace with your actual contact
+        'User-Agent': 'RealAddressFetcher/1.0 (youremail@example.com)'
     }
 
     # Step 1: Query Nominatim directly with city and full country name
@@ -106,7 +115,7 @@ def get_real_addresses(city: str, country: str, count: int) -> List[str]:
 
     nodes = result.get('elements', [])
     random.shuffle(nodes)
-    addresses = []
+    address_data = []
 
     for node in nodes:
         tags = node.get('tags', {})
@@ -118,9 +127,12 @@ def get_real_addresses(city: str, country: str, count: int) -> List[str]:
         if street and housenumber:
             if city_candidate and native_city_name.lower() in city_candidate.lower():
                 full_address = f"{street} {housenumber}, {postcode}, {city_candidate}, {country}"
-                addresses.append(full_address)
+                lat = node.get('lat')
+                lon = node.get('lon')
+                if lat is not None and lon is not None:
+                    address_data.append((full_address, float(lat), float(lon)))
 
-        if len(addresses) >= count:
+        if len(address_data) >= count:
             break
 
-    return addresses
+    return address_data

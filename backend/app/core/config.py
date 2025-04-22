@@ -15,7 +15,9 @@ def get_db():
             birthday DATE,
             phone_number VARCHAR,
             email VARCHAR,
-            address VARCHAR
+            address VARCHAR,
+            latitude DOUBLE,
+            longitude DOUBLE
         )
     """)
     return conn

@@ -19,6 +19,8 @@ class Member(BaseModel):
     phone_number: str
     email: str
     address: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class MemberUpdate(BaseModel):
     date_member_joined_group: Optional[date] = None
@@ -28,3 +30,5 @@ class MemberUpdate(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
