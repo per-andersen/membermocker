@@ -4,6 +4,7 @@ import { updateMember, deleteMember, downloadMembers } from '../services/api';
 export default function MemberList({ members, onMemberDeleted, onMemberUpdated }) {
   const [editingMember, setEditingMember] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
 
   const handleEdit = (member) => {
     setEditingMember(member.id);
@@ -55,21 +56,45 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
 
   return (
     <div className="space-y-4 p-6">
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => handleDownload('csv')}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-        >
-          Download CSV
-        </button>
-        <button
-          onClick={() => handleDownload('excel')}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-        >
-          Download Excel
-        </button>
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              viewMode === 'list'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Grid View
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleDownload('csv')}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+          >
+            Download CSV
+          </button>
+          <button
+            onClick={() => handleDownload('excel')}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+          >
+            Download Excel
+          </button>
+        </div>
       </div>
-      <div className="grid gap-4">
+      <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'grid gap-4'}`}>
         {members.map(member => (
           <div key={member.id} className="p-6 bg-gray-700 rounded-lg shadow-md">
             {editingMember === member.id ? (
@@ -147,7 +172,7 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
               </div>
             ) : (
               <div>
-                <div className="flex justify-between items-start">
+                <div className={`flex ${viewMode === 'grid' ? 'flex-col space-y-4' : 'justify-between items-start'}`}>
                   <div className="space-y-2">
                     <h3 className="font-bold text-lg text-white">{member.first_name} {member.surname}</h3>
                     <p className="text-gray-300">{member.email}</p>
@@ -158,7 +183,7 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                       <p>Joined: {new Date(member.date_member_joined_group).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className={`flex gap-2 ${viewMode === 'grid' ? 'mt-4' : ''}`}>
                     <button
                       onClick={() => handleEdit(member)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
