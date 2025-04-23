@@ -1,11 +1,17 @@
 import duckdb
 from pathlib import Path
+import os
 
+# Default to production database
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "members.duckdb"
-DB_PATH.parent.mkdir(exist_ok=True)
+TEST_DB_PATH = Path(__file__).parent.parent.parent / "data" / "test_members.duckdb"
 
 def get_db():
-    conn = duckdb.connect(str(DB_PATH))
+    # Use test database if TESTING environment variable is set
+    db_path = TEST_DB_PATH if os.getenv("TESTING") else DB_PATH
+    db_path.parent.mkdir(exist_ok=True)
+    
+    conn = duckdb.connect(str(db_path))
     conn.execute("""
         CREATE TABLE IF NOT EXISTS members (
             id UUID PRIMARY KEY,

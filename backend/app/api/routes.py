@@ -162,6 +162,13 @@ def download_members(format: str):
 
 @router.post("/custom-fields", response_model=CustomFieldDefinition)
 def create_custom_field(field: CustomFieldCreate):
+    if not field.name:
+        raise HTTPException(status_code=422, detail="Field name cannot be empty")
+        
+    valid_field_types = ["string", "integer", "alphanumeric", "email", "phone", "date"]
+    if field.field_type not in valid_field_types:
+        raise HTTPException(status_code=422, detail=f"Field type must be one of: {', '.join(valid_field_types)}")
+        
     db = get_db()
     field_def = CustomFieldDefinition(**field.model_dump())
     
@@ -207,7 +214,7 @@ def get_custom_field(field_id: UUID):
         raise HTTPException(status_code=404, detail="Custom field not found")
     
     return CustomFieldDefinition(
-        id=UUID(result[0]),
+        id=result[0] if isinstance(result[0], UUID) else UUID(result[0]),
         name=result[1],
         field_type=result[2],
         validation_rules=parse_json_field(result[3]) or {},
