@@ -12,6 +12,8 @@ def get_db():
     db_path.parent.mkdir(exist_ok=True)
     
     conn = duckdb.connect(str(db_path))
+    
+    # Create tables without foreign key constraints first
     conn.execute("""
         CREATE TABLE IF NOT EXISTS members (
             id UUID PRIMARY KEY,
@@ -37,14 +39,37 @@ def get_db():
         )
     """)
     
+    # Create custom_field_values table without foreign keys first
     conn.execute("""
         CREATE TABLE IF NOT EXISTS custom_field_values (
             member_id UUID,
             field_id UUID,
             value VARCHAR,
-            PRIMARY KEY (member_id, field_id),
-            FOREIGN KEY (member_id) REFERENCES members(id),
-            FOREIGN KEY (field_id) REFERENCES custom_field_definitions(id)
+            PRIMARY KEY (member_id, field_id)
         )
     """)
+    
+    # Add foreign key constraints in separate statements
+    try:
+        conn.execute("""
+            ALTER TABLE custom_field_values
+            ADD CONSTRAINT fk_member
+            FOREIGN KEY (member_id) 
+            REFERENCES members(id)
+        """)
+    except Exception:
+        # Constraint might already exist
+        pass
+
+    try:
+        conn.execute("""
+            ALTER TABLE custom_field_values
+            ADD CONSTRAINT fk_field
+            FOREIGN KEY (field_id) 
+            REFERENCES custom_field_definitions(id)
+        """)
+    except Exception:
+        # Constraint might already exist
+        pass
+
     return conn
