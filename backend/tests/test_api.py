@@ -12,34 +12,28 @@ client = TestClient(app)
 def test_db():
     try:
         """Set up test database for each test"""
+        # Clean up any existing test database
+        if TEST_DB_PATH.exists():
+            TEST_DB_PATH.unlink()
+
         # Set environment to use test database
         os.environ["TESTING"] = "1"
-
-        # Create a fresh database connection
+        
+        # Get DB connection - this will create tables
         db = get_db()
-
-        # Clear all tables before test
-        db.execute("DROP TABLE IF EXISTS custom_field_values")
-        db.execute("DROP TABLE IF EXISTS custom_field_definitions")
-        db.execute("DROP TABLE IF EXISTS members")
-
-        # Tables will be recreated by get_db()
-        db = get_db()
-
+        
         yield db
 
-    except Exception as e:
-        print(f"Error during test setup/teardown: {e}")
-        raise
     finally:
         # Ensure the database is closed
         if 'db' in locals():
             db.close()
-        # Clean up test database file
+        # Remove test database
         if TEST_DB_PATH.exists():
             TEST_DB_PATH.unlink()
         # Remove testing environment variable
-        del os.environ["TESTING"]
+        if "TESTING" in os.environ:
+            del os.environ["TESTING"]
 
 def test_generate_members(test_db):
     response = client.post("/generate", json={
