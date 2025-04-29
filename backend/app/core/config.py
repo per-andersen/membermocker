@@ -2,12 +2,10 @@ import duckdb
 from pathlib import Path
 import os
 
-# Default to production database
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "members.duckdb"
 TEST_DB_PATH = Path(__file__).parent.parent.parent / "data" / "test_members.duckdb"
 
 def get_db():
-    # Use test database if TESTING environment variable is set
     db_path = TEST_DB_PATH if os.getenv("TESTING") else DB_PATH
     db_path.parent.mkdir(exist_ok=True)
     
@@ -20,7 +18,6 @@ def get_db():
     # ALTER TABLE for adding FOREIGN KEY constraints, we can remove this workaround and implement a more siccint solution
     # using the duckdb_constraints() metadata function.
     
-    # Check if we need to create tables using DuckDB's metadata function
     tables = conn.execute("SELECT table_name FROM duckdb_tables() WHERE schema_name = 'main'").fetchall()
     existing_tables = [t[0] for t in tables]
     
