@@ -54,7 +54,7 @@ cd membermocker
 2. Set up the backend:
 ```bash
 cd backend
-uv pip sync uv.lock
+uv sync
 ```
 
 3. Set up the frontend:
