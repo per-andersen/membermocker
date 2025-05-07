@@ -11,10 +11,10 @@ def get_db():
     
     conn = duckdb.connect(str(db_path))
 
-    # Even though the below tables were previously created with 'IF EXISTS' exceptions of type:
+    # Even though the below tables were previously created with 'IF NOT EXISTS' exceptions of type:
     # 'duckdb.duckdb.TransactionException: TransactionContext Error: Catalog write-write conflict on alter with "members"'
     # would be raised when running the app. Therefore we first create a table to keep track of what we've created,
-    # and only create the tables if they don't exist. A sort of 'IF EXISTS' done by hand. Once DuckDB supports 
+    # and only create the tables if they don't exist. A sort of 'IF NOT EXISTS' done by hand. Once DuckDB supports 
     # ALTER TABLE for adding FOREIGN KEY constraints, we can remove this workaround and implement a more siccint solution
     # using the duckdb_constraints() metadata function.
     
@@ -23,7 +23,7 @@ def get_db():
     
     if 'members' not in existing_tables:
         conn.execute("""
-            CREATE TABLE members (
+            CREATE TABLE IF NOT EXISTS members (
                 id UUID PRIMARY KEY,
                 date_member_joined_group DATE,
                 first_name VARCHAR,
@@ -39,7 +39,7 @@ def get_db():
     
     if 'custom_field_definitions' not in existing_tables:
         conn.execute("""
-            CREATE TABLE custom_field_definitions (
+            CREATE TABLE IF NOT EXISTS custom_field_definitions (
                 id UUID PRIMARY KEY,
                 name VARCHAR NOT NULL,
                 field_type VARCHAR NOT NULL,
@@ -50,7 +50,7 @@ def get_db():
     
     if 'custom_field_values' not in existing_tables:
         conn.execute("""
-            CREATE TABLE custom_field_values (
+            CREATE TABLE IF NOT EXISTS custom_field_values (
                 member_id UUID,
                 field_id UUID,
                 value VARCHAR,
