@@ -15,6 +15,10 @@ def generate_members(config: MemberConfig) -> List[Member]:
     """
     
     addresses_with_coords = get_real_addresses(config.city, config.country, config.count)
+    db = get_db()
+    
+    # Get all custom field definitions
+    custom_fields = db.execute("SELECT id, name, field_type, validation_rules FROM custom_field_definitions").fetchall()
     
     members = []
     for i in range(config.count):
@@ -22,7 +26,7 @@ def generate_members(config: MemberConfig) -> List[Member]:
             messages=[
                 {
                     'role': 'user',
-                    'content': f'Get the data for this ficticious group member from the city of {config.city}, {config.country}. Their age should be between {config.min_age} and {config.max_age} years old.',
+                    'content': f'Get the data for this ficticious group member from the city of {config.city}, {config.country}. Their age should be between {config.min_age} and {config.max_age} years old. Leave the custom fields empty.',
                 }
             ],
             model='llama3.1',
@@ -30,15 +34,14 @@ def generate_members(config: MemberConfig) -> List[Member]:
         )
         
         member = Member.model_validate_json(response.message.content)
+        member.custom_fields = None
         if i < len(addresses_with_coords):
             address, lat, lon = addresses_with_coords[i]
             member.address = address
             member.latitude = lat
             member.longitude = lon
-        members.append(member)
-    
-    db = get_db()
-    for member in members:
+            
+        # Insert the member
         db.execute("""
             INSERT INTO members 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -54,6 +57,8 @@ def generate_members(config: MemberConfig) -> List[Member]:
             member.latitude,
             member.longitude
         ])
+        
+        members.append(member)
     
     return members
 

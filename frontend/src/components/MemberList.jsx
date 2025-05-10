@@ -9,15 +9,31 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
 
   const handleEdit = (member) => {
     setEditingMember(member.id);
-    setEditForm(member);
+    setEditForm({
+      ...member,
+      custom_fields: member.custom_fields || {}
+    });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name.startsWith('custom_')) {
+      // Handle custom field changes
+      const fieldName = name.replace('custom_', '');
+      setEditForm(prev => ({
+        ...prev,
+        custom_fields: {
+          ...prev.custom_fields,
+          [fieldName]: value
+        }
+      }));
+    } else {
+      // Handle regular field changes
+      setEditForm(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSave = async (id) => {
@@ -169,6 +185,20 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                       onChange={handleChange}
                       className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
+                    {editForm.custom_fields && Object.entries(editForm.custom_fields).map(([fieldName, value]) => (
+                      <div key={fieldName} className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          {fieldName}
+                        </label>
+                        <input
+                          type="text"
+                          name={`custom_${fieldName}`}
+                          value={value || ''}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                      </div>
+                    ))}
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
@@ -197,6 +227,19 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                         <p>Born: {new Date(member.birthday).toLocaleDateString()}</p>
                         <p>Joined: {new Date(member.date_member_joined_group).toLocaleDateString()}</p>
                       </div>
+                      {member.custom_fields && Object.entries(member.custom_fields).length > 0 && (
+                        <div className="border-t border-gray-600 mt-3 pt-3">
+                          <h4 className="text-sm font-medium text-gray-400 mb-2">Custom Fields</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            {Object.entries(member.custom_fields).map(([fieldName, value]) => (
+                              <div key={fieldName}>
+                                <span className="text-gray-400">{fieldName}:</span>{' '}
+                                <span className="text-gray-300">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className={`flex gap-2 ${viewMode === 'grid' ? 'mt-4' : ''}`}>
                       <button
