@@ -35,7 +35,7 @@ def get_db():
                 latitude DOUBLE,
                 longitude DOUBLE
             )
-        """)
+        """).commit()
     
     if 'custom_field_definitions' not in existing_tables:
         conn.execute("""
@@ -46,7 +46,7 @@ def get_db():
                 validation_rules JSON,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """).commit()
     
     if 'custom_field_values' not in existing_tables:
         conn.execute("""
@@ -58,15 +58,6 @@ def get_db():
                 FOREIGN KEY (member_id) REFERENCES members(id),
                 FOREIGN KEY (field_id) REFERENCES custom_field_definitions(id)
             )
-        """)
+        """).commit()
 
     return conn
-
-if __name__ == "__main__":
-   conn = get_db()
-   existing_constraints = conn.execute("""
-        SELECT constraint_name
-        FROM duckdb_constraints()
-        WHERE table_name = 'custom_field_values'
-    """).fetchall()
-   print(existing_constraints)
