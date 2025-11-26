@@ -73,7 +73,7 @@ def get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, f
         List[Tuple[str, float, float]]: A list of tuples containing (address, latitude, longitude).
     """
     headers = {
-        'User-Agent': 'RealAddressFetcher/1.0 (realaddressfetcher@example.com)'
+        'User-Agent': 'MemberMocker/1.0 (membermocker@proton.me)'
     }
 
     # Step 1: Query Nominatim directly with city and full country name
