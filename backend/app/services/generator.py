@@ -114,7 +114,7 @@ def get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, f
     out body;
     """
 
-    response = requests.post(overpass_url, data=overpass_query, headers=headers)
+    response = requests.post(overpass_url, data=overpass_query, headers=headers, timeout=60)
     response.raise_for_status()
     result = response.json()
 

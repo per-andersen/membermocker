@@ -5,8 +5,98 @@ import pytest
 import os
 from app.services.generator import get_real_addresses
 from uuid import uuid4
+from unittest.mock import patch, MagicMock
+from typing import List, Tuple
+from datetime import date, timedelta
+import json
+import random
 
 client = TestClient(app)
+
+def generate_mock_member_json() -> str:
+    """Generate a JSON string representing a valid Member for mocking ollama responses"""
+    today = date.today()
+    member_id = str(uuid4())
+    
+    first_names = ["John", "Jane", "Peter", "Anna", "Michael", "Sarah", "David", "Emma"]
+    surnames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"]
+    
+    first_name = random.choice(first_names)
+    surname = random.choice(surnames)
+    
+    # Generate realistic dates
+    birth_date = today - timedelta(days=random.randint(18*365, 70*365))
+    join_date = today - timedelta(days=random.randint(0, 365*5))
+    
+    member_data = {
+        "id": member_id,
+        "date_member_joined_group": join_date.isoformat(),
+        "first_name": first_name,
+        "surname": surname,
+        "birthday": birth_date.isoformat(),
+        "phone_number": f"+45 {random.randint(10000000, 99999999)}",
+        "email": f"{first_name.lower()}.{surname.lower()}@example.com",
+        "address": "Mock Address",
+        "latitude": None,
+        "longitude": None,
+        "custom_fields": None
+    }
+    
+    return json.dumps(member_data)
+
+def mock_ollama_chat(*args, **kwargs):
+    """Mock function for ollama.chat that returns valid member data"""
+    response = MagicMock()
+    response.message.content = generate_mock_member_json()
+    return response
+
+def mock_get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, float, float]]:
+    """
+    Mock function that returns fake addresses for testing.
+    Returns addresses with consistent, predictable coordinates.
+    """
+    addresses = []
+    for i in range(count):
+        address = f"Vej {i+1}, 1000 {city}, {country}"
+        latitude = 55.6761 + (i * 0.0001)  # Slight variations
+        longitude = 12.5683 + (i * 0.0001)
+        addresses.append((address, latitude, longitude))
+    return addresses
+
+@pytest.fixture
+def mock_addresses(request):
+    """
+    Fixture that patches get_real_addresses with mock implementation.
+    Only applies the patch if --run-expensive is NOT specified.
+    If --run-expensive is used, the real API will be called.
+    """
+    run_expensive = request.config.getoption("--run-expensive")
+    
+    if run_expensive:
+        # Use real API calls
+        yield
+    else:
+        # Use mocked addresses - patch both the module and the import location
+        with patch('app.services.generator.get_real_addresses', side_effect=mock_get_real_addresses):
+            with patch('test_api.get_real_addresses', side_effect=mock_get_real_addresses):
+                yield
+
+@pytest.fixture
+def mock_chat(request):
+    """
+    Fixture that patches ollama.chat with mock implementation.
+    Only applies the patch if --run-expensive is NOT specified.
+    If --run-expensive is used, the real ollama chat will be called.
+    """
+    run_expensive = request.config.getoption("--run-expensive")
+    
+    if run_expensive:
+        # Use real ollama chat
+        yield
+    else:
+        # Use mocked chat
+        with patch('app.services.generator.chat', side_effect=mock_ollama_chat):
+            yield
 
 @pytest.fixture(autouse=True)
 def test_db():
@@ -30,7 +120,7 @@ def test_db():
         if "TESTING" in os.environ:
             del os.environ["TESTING"]
 
-def test_generate_members(test_db):
+def test_generate_members(test_db, mock_addresses, mock_chat):
     response = client.post("/generate", json={
         "city": "Copenhagen",
         "country": "Denmark",
@@ -49,7 +139,7 @@ def test_generate_members(test_db):
         assert "phone_number" in member
         assert "address" in member
 
-def test_list_members(test_db):
+def test_list_members(test_db, mock_addresses, mock_chat):
     
     client.post("/generate", json={
         "city": "Copenhagen",
@@ -62,7 +152,7 @@ def test_list_members(test_db):
     members = response.json()
     assert len(members) == 3
 
-def test_get_member(test_db):
+def test_get_member(test_db, mock_addresses, mock_chat):
     
     response = client.post("/generate", json={
         "city": "Copenhagen",
@@ -77,7 +167,7 @@ def test_get_member(test_db):
     assert member["id"] == member_id
 
 
-def test_update_member(test_db):
+def test_update_member(test_db, mock_addresses, mock_chat):
     
     response = client.post("/generate", json={
         "city": "Copenhagen",
@@ -97,7 +187,7 @@ def test_update_member(test_db):
     assert updated_member["first_name"] == "Updated"
     assert updated_member["surname"] == "Name"
 
-def test_delete_member(test_db):
+def test_delete_member(test_db, mock_addresses, mock_chat):
     response = client.post("/generate", json={
         "city": "Copenhagen",
         "country": "Denmark",
@@ -111,7 +201,7 @@ def test_delete_member(test_db):
     response = client.get(f"/members/{member_id}")
     assert response.status_code == 404
 
-def test_download_members(test_db):
+def test_download_members(test_db, mock_addresses, mock_chat):
     client.post("/generate", json={
         "city": "Copenhagen",
         "country": "Denmark",
@@ -131,7 +221,7 @@ def test_download_members(test_db):
     response = client.get("/download/invalid")
     assert response.status_code == 400
 
-def test_get_real_addresses():
+def test_get_real_addresses(mock_addresses):
     city = "København"
     country = "Danmark"
     count = 10
@@ -139,8 +229,8 @@ def test_get_real_addresses():
     addresses = get_real_addresses(city, country, count)
     assert len(addresses) == count
     for address in addresses:
-        assert "københavn" in address[0].lower()
-        assert "danmark" in address[0].lower()
+        assert "København" in address[0]
+        assert "Danmark" in address[0]
 
 def test_create_custom_field(test_db):
     """Test creating a custom field"""
@@ -220,7 +310,7 @@ def test_delete_custom_field(test_db):
     get_response = client.get(f"/custom-fields/{field_id}")
     assert get_response.status_code == 404
 
-def test_member_with_custom_fields(test_db):
+def test_member_with_custom_fields(test_db, mock_addresses, mock_chat):
     field_data = {
         "name": "membership_level",
         "field_type": "string",
@@ -251,7 +341,7 @@ def test_member_with_custom_fields(test_db):
     retrieved_member = response.json()
     assert retrieved_member["custom_fields"] == update_data["custom_fields"]
 
-def test_invalid_member_data(test_db):
+def test_invalid_member_data(test_db, mock_addresses, mock_chat):
     """Test handling of invalid member data"""
     invalid_id = str(uuid4())
     
