@@ -4,3 +4,4 @@
 .DS_Store
 backend/data/*.duckdb.wal
 backend/data/*.duckdb
+backend/__pycache__/
