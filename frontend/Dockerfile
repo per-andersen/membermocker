@@ -1,6 +1,11 @@
 # Build stage
 FROM node:20-slim as builder
 
+# Install wget and curl for healthchecks (useful for dev mode)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget curl && \
+    rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
@@ -18,6 +23,9 @@ RUN npm run build
 
 # Production stage
 FROM nginx:alpine
+
+# Install wget for healthchecks
+RUN apk add --no-cache wget
 
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf

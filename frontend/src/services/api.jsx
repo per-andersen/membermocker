@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'http://localhost:8000' });
+// Use VITE_API_URL if set (for development), otherwise use /api (for production via nginx proxy)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API = axios.create({ baseURL: API_BASE_URL });
 
 export const generateMembers = async (config) => {
   const response = await API.post('/generate', config);
