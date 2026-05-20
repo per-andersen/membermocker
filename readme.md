@@ -6,7 +6,7 @@ Generate realistic mock membership data for testing and development purposes, wi
 
 ## Overview
 
-MemberMocker is a powerful tool designed for developers and organizations who need to test applications with realistic membership data without compromising real user information. It generates synthetic data that mirrors the structure and characteristics of actual membership records while maintaining complete privacy and GDPR compliance.
+MemberMocker is first and foremost an experiment in what is possible using large language models to assist in planning, implementing, and documenting a small project. Secondly it is a powerful tool designed for developers and organizations who need to test applications with realistic membership data without compromising real user information. It generates synthetic data that mirrors the structure and characteristics of actual membership records while maintaining complete privacy and GDPR compliance.
 
 ### Key Features
 
