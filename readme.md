@@ -16,6 +16,10 @@ MemberMocker is first and foremost an experiment in what is possible using large
 - 🌎 Can create membership data for most of the world
 - 🚀 Easy-to-use API and web interface
 
+## Quick Start
+
+See [OLLAMA.md](OLLAMA.md) for detailed instructions on setting up the Ollama connection, which is required for member data generation.
+
 ## Technologies Used
 
 ### Frontend
@@ -36,6 +40,11 @@ MemberMocker is first and foremost an experiment in what is possible using large
 
 ### Prerequisites
 
+#### Docker Deployment (Recommended)
+- Docker and Docker Compose
+- Ollama with llama3.1
+
+#### Local Development
 - Python 3.12 or higher
 - Node.js 18 or higher
 - npm or yarn
@@ -44,6 +53,41 @@ MemberMocker is first and foremost an experiment in what is possible using large
 - Ollama with llama3.1
 
 ### Installation
+
+#### Using Docker (Recommended)
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/membermocker.git
+cd membermocker
+```
+
+2. Copy the environment file:
+```bash
+cp .env.example .env
+```
+
+3. Start the application:
+```bash
+# For production
+docker compose up --build
+
+# For development
+docker compose -f docker-compose.dev.yml up --build
+```
+
+The application will be available at:
+- Production mode:
+  - Frontend: http://localhost:80
+  - Backend API: http://localhost:8000
+  - API Documentation: http://localhost:8000/docs
+
+- Development mode:
+  - Frontend: http://localhost:5173
+  - Backend API: http://localhost:8000
+  - API Documentation: http://localhost:8000/docs
+
+#### Local Installation
 
 1. Clone the repository:
 ```bash
@@ -65,6 +109,24 @@ npm install
 
 ### Running the Application
 
+#### Using Docker (Recommended)
+
+1. Ensure Ollama is running:
+```bash
+ollama serve
+```
+
+2. Start the application:
+```bash
+# Production mode
+docker compose up
+
+# Development mode (with hot-reload)
+docker compose -f docker-compose.dev.yml up
+```
+
+#### Local Development
+
 1. Start ollama:
 ```bash
 ollama serve
@@ -82,10 +144,7 @@ cd frontend
 npm run dev
 ```
 
-The application will be available at:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
+The application will be available at the URLs listed in the installation section.
 
 ## Usage
 
@@ -110,7 +169,12 @@ membermocker/
 ├── LICENSE
 ├── prd.md              # Project Requirements Document
 ├── readme.md
+├── OLLAMA.md          # Ollama setup instructions
+├── docker-compose.yml # Production Docker Compose configuration
+├── docker-compose.dev.yml # Development Docker Compose configuration
+├── .env.example       # Example environment variables
 ├── backend/            # Python FastAPI backend
+│   ├── Dockerfile     # Backend container configuration
 │   ├── pyproject.toml  # Python project dependencies
 │   ├── uv.lock         # UV package lock file
 │   ├── app/
@@ -122,6 +186,7 @@ membermocker/
 │   ├── data/          # Database storage
 │   └── tests/         # Backend tests
 └── frontend/          # React frontend
+    ├── Dockerfile     # Frontend container configuration
     ├── index.html     # HTML entry point
     ├── vite.config.ts # Vite configuration
     ├── public/        # Static assets
