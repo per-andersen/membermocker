@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from app.services.generator import generate_members
 from app.models.member import MemberConfig, Member, MemberUpdate
@@ -46,7 +46,10 @@ def create_members(config: MemberConfig):
     return generate_members(config)
 
 @router.get("/members", response_model=List[Member])
-def list_members():
+def list_members(
+    limit: int = Query(default=1000, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+):
     db = get_db()
     try:
         db.execute("""
@@ -63,7 +66,9 @@ def list_members():
             LEFT JOIN custom_field_definitions cf ON cfv.field_id::uuid = cf.id::uuid
             GROUP BY m.id, m.date_member_joined_group, m.first_name, m.surname,
                      m.birthday, m.phone_number, m.email, m.address, m.latitude, m.longitude
-        """)
+            ORDER BY m.date_member_joined_group, m.id
+            LIMIT %s OFFSET %s
+        """, [limit, offset])
 
         result = db.fetchall()
     finally:

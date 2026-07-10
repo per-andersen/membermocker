@@ -165,6 +165,33 @@ def test_list_members(test_db, mock_addresses, mock_chat):
     assert len(members) == 3
 
 
+def test_list_members_pagination(test_db, mock_addresses, mock_chat):
+    client.post("/generate", json={
+        "city": "Copenhagen",
+        "country": "Denmark",
+        "count": 5
+    })
+
+    response = client.get("/members", params={"limit": 2})
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+    response = client.get("/members", params={"limit": 2, "offset": 4})
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    # Paging through in chunks yields the same members in the same order
+    all_ids = [m["id"] for m in client.get("/members").json()]
+    paged_ids = []
+    for offset in range(0, 5, 2):
+        page = client.get("/members", params={"limit": 2, "offset": offset}).json()
+        paged_ids += [m["id"] for m in page]
+    assert paged_ids == all_ids
+
+    response = client.get("/members", params={"limit": 0})
+    assert response.status_code == 422
+
+
 def test_get_member(test_db, mock_addresses, mock_chat):
     
     response = client.post("/generate", json={
