@@ -20,47 +20,51 @@ def generate_members(config: MemberConfig) -> List[Member]:
     
     addresses_with_coords = get_real_addresses(config.city, config.country, config.count)
     db = get_db()
-    
+
     members = []
-    for i in range(config.count):
-        response = chat(
-            messages=[
-                {
-                    'role': 'user',
-                    'content': f'Get the data for this ficticious group member from the city of {config.city}, {config.country}. Their age should be between {config.min_age} and {config.max_age} years old. Leave the custom fields empty.',
-                }
-            ],
-            model='llama3.1',
-            format=Member.model_json_schema(),
-        )
-        
-        member = Member.model_validate_json(response.message.content)
-        member.custom_fields = None
-        if i < len(addresses_with_coords):
-            address, lat, lon = addresses_with_coords[i]
-            member.address = address
-            member.latitude = lat
-            member.longitude = lon
-            
-        # Insert the member
-        db.execute("""
-            INSERT INTO members 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, [
-            str(member.id),
-            member.date_member_joined_group,
-            member.first_name,
-            member.surname,
-            member.birthday,
-            member.phone_number,
-            member.email,
-            member.address,
-            member.latitude,
-            member.longitude
-        ])
-        
-        members.append(member)
-    
+    try:
+        for i in range(config.count):
+            response = chat(
+                messages=[
+                    {
+                        'role': 'user',
+                        'content': f'Get the data for this ficticious group member from the city of {config.city}, {config.country}. Their age should be between {config.min_age} and {config.max_age} years old. Leave the custom fields empty.',
+                    }
+                ],
+                model='llama3.1',
+                format=Member.model_json_schema(),
+            )
+
+            member = Member.model_validate_json(response.message.content)
+            member.custom_fields = None
+            if i < len(addresses_with_coords):
+                address, lat, lon = addresses_with_coords[i]
+                member.address = address
+                member.latitude = lat
+                member.longitude = lon
+
+            # Insert the member
+            db.execute("""
+                INSERT INTO members
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, [
+                str(member.id),
+                member.date_member_joined_group,
+                member.first_name,
+                member.surname,
+                member.birthday,
+                member.phone_number,
+                member.email,
+                member.address,
+                member.latitude,
+                member.longitude
+            ])
+
+            db.commit()
+            members.append(member)
+    finally:
+        db.close()
+
     return members
 
 def _get_country_code(country_name: str) -> str:

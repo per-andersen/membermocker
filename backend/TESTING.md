@@ -2,6 +2,22 @@
 
 This project includes two testing modes to balance between fast development iteration and comprehensive API testing.
 
+## Running Tests via Make (Recommended)
+
+From the repository root:
+
+```bash
+make pytest                  # Fast tests with mocked external APIs
+make pytest-including-slow   # Full suite including real Ollama and OpenStreetMap calls
+```
+
+These targets automatically:
+- Start the PostgreSQL container (`docker compose -f docker-compose.dev.yml up -d --wait postgres`) if it isn't running
+- Create a dedicated `membermocker_test` database (so tests never touch data in the `membermocker` database)
+- Load connection settings from `.env` if present
+
+Supporting targets: `make db-up` / `make db-down` start and stop the PostgreSQL container.
+
 ## Quick Tests (Default) - With Mocking
 
 Run fast tests that mock external API calls:
@@ -16,12 +32,13 @@ This mode:
 - ✅ Perfect for development and CI/CD pipelines
 - ✅ No external dependencies or rate limits
 - ✅ Deterministic results
+- 🗄️ Requires PostgreSQL server running
 
 **Use this mode when:**
 - Developing new features
 - Doing refactoring
 - Running tests in CI/CD
-- You want fast feedback loops (~80 seconds for all tests)
+- You want fast feedback loops (~1.3 seconds for all tests)
 
 ## Expensive Tests - With Real API Calls
 
@@ -34,6 +51,7 @@ pytest test_api.py --run-expensive
 This mode:
 - 🔗 Makes real calls to OpenStreetMap APIs (Nominatim, Overpass)
 - 🤖 Makes real calls to local Ollama instance (requires Ollama running)
+- 🗄️ Requires PostgreSQL server running (see `.env.example` for connection details)
 - ⏱️ Runs slower (~26 seconds per member generation test due to API latency)
 - 🔄 Subject to rate limits
 - 🌐 Requires internet connection
@@ -102,8 +120,11 @@ The mocking provides a **37x speedup** for the member generation tests!
 
 ### Tests fail with real API when using `--run-expensive`
 - Make sure Ollama is running: `ollama serve`
+- If `OLLAMA_HOST` in `.env` points elsewhere, override it: `make pytest-including-slow OLLAMA_HOST=http://localhost:11434`
+- Make sure PostgreSQL is running: `make db-up`
 - Check your internet connection for OpenStreetMap API calls
 - OpenStreetMap APIs have rate limits; spread requests over time
+- Verify database connection in `.env`
 
 ### Mock data doesn't match real data format
 - The mocks are intentionally simplified for testing

@@ -1,17 +1,18 @@
-from fastapi.testclient import TestClient
-from app.main import app
-from app.core.config import get_db, TEST_DB_PATH
 import pytest
-import os
-from app.services.generator import get_real_addresses
-from uuid import uuid4
-from unittest.mock import patch, MagicMock
-from typing import List, Tuple
-from datetime import date, timedelta
 import json
 import random
+from datetime import date, timedelta
+from fastapi.testclient import TestClient
+from app.main import app
+from app.core.config import get_db
+from app.services.generator import get_real_addresses
+from unittest.mock import patch, MagicMock
+from uuid import uuid4
+from typing import List, Tuple
+
 
 client = TestClient(app)
+
 
 def generate_mock_member_json() -> str:
     """Generate a JSON string representing a valid Member for mocking ollama responses"""
@@ -44,11 +45,13 @@ def generate_mock_member_json() -> str:
     
     return json.dumps(member_data)
 
+
 def mock_ollama_chat(*args, **kwargs):
     """Mock function for ollama.chat that returns valid member data"""
     response = MagicMock()
     response.message.content = generate_mock_member_json()
     return response
+
 
 def mock_get_real_addresses(city: str, country: str, count: int) -> List[Tuple[str, float, float]]:
     """
@@ -63,12 +66,39 @@ def mock_get_real_addresses(city: str, country: str, count: int) -> List[Tuple[s
         addresses.append((address, latitude, longitude))
     return addresses
 
+
+def clean_db():
+    """Clean the database before each test"""
+    test_db = get_db()
+    try:
+        test_db.execute("DELETE FROM custom_field_values")
+        test_db.execute("DELETE FROM custom_field_definitions")
+        test_db.execute("DELETE FROM members")
+        test_db.commit()
+    finally:
+        test_db.close()
+
+
+@pytest.fixture(autouse=True)
+def test_db(request):
+    """Use a PostgreSQL database for testing"""
+    clean_db()
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_db():
+    """Initialize the test database"""
+    clean_db()
+    yield
+
+
 @pytest.fixture
 def mock_addresses(request):
     """
     Fixture that patches get_real_addresses with mock implementation.
     Only applies the patch if --run-expensive is NOT specified.
-    If --run-expensive is used, the real API will be called.
+    If --run_expensive is used, the real API will be called.
     """
     run_expensive = request.config.getoption("--run-expensive")
     
@@ -81,12 +111,13 @@ def mock_addresses(request):
             with patch('test_api.get_real_addresses', side_effect=mock_get_real_addresses):
                 yield
 
+
 @pytest.fixture
 def mock_chat(request):
     """
     Fixture that patches ollama.chat with mock implementation.
-    Only applies the patch if --run-expensive is NOT specified.
-    If --run-expensive is used, the real ollama chat will be called.
+    Only applies the patch if --run_expensive is NOT specified.
+    If --run_expensive is used, the real ollama chat will be called.
     """
     run_expensive = request.config.getoption("--run-expensive")
     
@@ -98,27 +129,6 @@ def mock_chat(request):
         with patch('app.services.generator.chat', side_effect=mock_ollama_chat):
             yield
 
-@pytest.fixture(autouse=True)
-def test_db():
-    try:
-        if TEST_DB_PATH.exists():
-            TEST_DB_PATH.unlink()
-
-        os.environ["TESTING"] = "1"
-        
-        db = get_db()
-        
-        yield db
-
-    finally:
-        if 'db' in locals():
-            db.close()
-        
-        if TEST_DB_PATH.exists():
-            TEST_DB_PATH.unlink()
-        
-        if "TESTING" in os.environ:
-            del os.environ["TESTING"]
 
 def test_generate_members(test_db, mock_addresses, mock_chat):
     response = client.post("/generate", json={
@@ -139,6 +149,7 @@ def test_generate_members(test_db, mock_addresses, mock_chat):
         assert "phone_number" in member
         assert "address" in member
 
+
 def test_list_members(test_db, mock_addresses, mock_chat):
     
     client.post("/generate", json={
@@ -151,6 +162,7 @@ def test_list_members(test_db, mock_addresses, mock_chat):
     assert response.status_code == 200
     members = response.json()
     assert len(members) == 3
+
 
 def test_get_member(test_db, mock_addresses, mock_chat):
     
@@ -187,6 +199,7 @@ def test_update_member(test_db, mock_addresses, mock_chat):
     assert updated_member["first_name"] == "Updated"
     assert updated_member["surname"] == "Name"
 
+
 def test_delete_member(test_db, mock_addresses, mock_chat):
     response = client.post("/generate", json={
         "city": "Copenhagen",
@@ -200,6 +213,7 @@ def test_delete_member(test_db, mock_addresses, mock_chat):
     
     response = client.get(f"/members/{member_id}")
     assert response.status_code == 404
+
 
 def test_download_members(test_db, mock_addresses, mock_chat):
     client.post("/generate", json={
@@ -221,6 +235,7 @@ def test_download_members(test_db, mock_addresses, mock_chat):
     response = client.get("/download/invalid")
     assert response.status_code == 400
 
+
 def test_get_real_addresses(mock_addresses):
     city = "København"
     country = "Danmark"
@@ -231,6 +246,7 @@ def test_get_real_addresses(mock_addresses):
     for address in addresses:
         assert "København" in address[0]
         assert "Danmark" in address[0]
+
 
 def test_create_custom_field(test_db):
     """Test creating a custom field"""
@@ -249,6 +265,7 @@ def test_create_custom_field(test_db):
     assert created_field["name"] == field_data["name"]
     assert created_field["field_type"] == field_data["field_type"]
     assert created_field["validation_rules"] == field_data["validation_rules"]
+
 
 def test_list_custom_fields(test_db):
     fields = [
@@ -273,6 +290,7 @@ def test_list_custom_fields(test_db):
     assert len(listed_fields) >= 2
     assert {f["name"] for f in listed_fields} == {"membership_level", "points"}
 
+
 def test_update_custom_field(test_db):
     field_data = {
         "name": "membership_level",
@@ -294,6 +312,7 @@ def test_update_custom_field(test_db):
     assert updated_field["name"] == update_data["name"]
     assert updated_field["validation_rules"] == update_data["validation_rules"]
 
+
 def test_delete_custom_field(test_db):
     field_data = {
         "name": "membership_level",
@@ -309,6 +328,7 @@ def test_delete_custom_field(test_db):
     
     get_response = client.get(f"/custom-fields/{field_id}")
     assert get_response.status_code == 404
+
 
 def test_member_with_custom_fields(test_db, mock_addresses, mock_chat):
     field_data = {
@@ -341,6 +361,7 @@ def test_member_with_custom_fields(test_db, mock_addresses, mock_chat):
     retrieved_member = response.json()
     assert retrieved_member["custom_fields"] == update_data["custom_fields"]
 
+
 def test_invalid_member_data(test_db, mock_addresses, mock_chat):
     """Test handling of invalid member data"""
     invalid_id = str(uuid4())
@@ -360,6 +381,7 @@ def test_invalid_member_data(test_db, mock_addresses, mock_chat):
         "count": 101  # Exceeds maximum allowed
     })
     assert response.status_code == 422
+
 
 def test_invalid_custom_field_data(test_db):
     """Test handling of invalid custom field operations"""

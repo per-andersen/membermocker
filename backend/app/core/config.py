@@ -1,63 +1,109 @@
-import duckdb
-from pathlib import Path
 import os
+import threading
+from psycopg import Connection
+from psycopg_pool import ConnectionPool
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "members.duckdb"
-TEST_DB_PATH = Path(__file__).parent.parent.parent / "data" / "test_members.duckdb"
 
-def get_db():
-    db_path = TEST_DB_PATH if os.getenv("TESTING") else DB_PATH
-    db_path.parent.mkdir(exist_ok=True)
-    
-    conn = duckdb.connect(str(db_path))
+_pool: ConnectionPool | None = None
+_pool_lock = threading.Lock()
 
-    # Even though the below tables were previously created with 'IF NOT EXISTS' exceptions of type:
-    # 'duckdb.duckdb.TransactionException: TransactionContext Error: Catalog write-write conflict on alter with "members"'
-    # would be raised when running the app. Therefore we first create a table to keep track of what we've created,
-    # and only create the tables if they don't exist. A sort of 'IF NOT EXISTS' done by hand. Once DuckDB supports 
-    # ALTER TABLE for adding FOREIGN KEY constraints, we can remove this workaround and implement a more siccint solution
-    # using the duckdb_constraints() metadata function.
-    
-    tables = conn.execute("SELECT table_name FROM duckdb_tables() WHERE schema_name = 'main'").fetchall()
-    existing_tables = [t[0] for t in tables]
-    
-    if 'members' not in existing_tables:
-        conn.execute("""
+
+def _conninfo() -> str:
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    dbname = os.getenv("DB_NAME", "membermocker")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "postgres")
+    sslmode = os.getenv("DB_SSLMODE", "disable")
+
+    return f"host={host} port={port} dbname={dbname} user={user} password={password} sslmode={sslmode}"
+
+
+def _get_pool() -> ConnectionPool:
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                pool = ConnectionPool(_conninfo(), min_size=1, max_size=10, open=False)
+                pool.open(wait=True, timeout=30)
+                with pool.connection() as conn:
+                    _initialize_tables(conn)
+                _pool = pool
+    return _pool
+
+
+class SimpleDB:
+    """A thin wrapper around a pooled psycopg3 connection for simple SQL operations."""
+
+    def __init__(self, pool: ConnectionPool):
+        self._pool = pool
+        self._conn = pool.getconn()
+        self._cursor = self._conn.cursor()
+
+    def execute(self, sql: str, params: list = None):
+        if params is None:
+            params = []
+        self._cursor.execute(sql, params)
+
+    def executemany(self, sql: str, params_list: list):
+        self._cursor.executemany(sql, params_list)
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._cursor.close()
+        # Discard any uncommitted state before handing the connection back
+        self._conn.rollback()
+        self._pool.putconn(self._conn)
+
+
+def get_db() -> SimpleDB:
+    """Get a database handle backed by the shared connection pool."""
+    return SimpleDB(_get_pool())
+
+
+def _initialize_tables(conn: Connection) -> None:
+    """Initialize database tables if they don't exist."""
+    with conn.cursor() as cur:
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS members (
                 id UUID PRIMARY KEY,
-                date_member_joined_group DATE,
-                first_name VARCHAR,
-                surname VARCHAR,
-                birthday DATE,
-                phone_number VARCHAR,
-                email VARCHAR,
-                address VARCHAR,
-                latitude DOUBLE,
-                longitude DOUBLE
+                date_member_joined_group DATE NOT NULL,
+                first_name VARCHAR(100) NOT NULL,
+                surname VARCHAR(100) NOT NULL,
+                birthday DATE NOT NULL,
+                phone_number VARCHAR(50) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                address TEXT NOT NULL,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION
             )
-        """).commit()
-    
-    if 'custom_field_definitions' not in existing_tables:
-        conn.execute("""
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS custom_field_definitions (
                 id UUID PRIMARY KEY,
-                name VARCHAR NOT NULL,
-                field_type VARCHAR NOT NULL,
-                validation_rules JSON,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                name VARCHAR(255) NOT NULL UNIQUE,
+                field_type VARCHAR(50) NOT NULL,
+                validation_rules TEXT NOT NULL DEFAULT '{}',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
-        """).commit()
-    
-    if 'custom_field_values' not in existing_tables:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS custom_field_values (
-                member_id UUID,
-                field_id UUID,
-                value VARCHAR,
-                PRIMARY KEY (member_id, field_id),
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (field_id) REFERENCES custom_field_definitions(id)
-            )
-        """).commit()
+        """)
 
-    return conn
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS custom_field_values (
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                field_id UUID NOT NULL REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+                value TEXT NOT NULL,
+                PRIMARY KEY (member_id, field_id)
+            )
+        """)
+
+    conn.commit()

@@ -30,7 +30,7 @@ See [OLLAMA.md](OLLAMA.md) for detailed instructions on setting up the Ollama co
 
 ### Backend
 - **FastAPI**: Modern, fast web framework for building APIs with Python
-- **DuckDB**: Embedded analytical database system
+- **PostgreSQL**: Relational database for storing member data
 - **Pandas**: Data manipulation and analysis library
 - **Pydantic**: Data validation using Python type annotations
 - **Uvicorn**: Lightning-fast ASGI server implementation
@@ -183,7 +183,7 @@ membermocker/
 │   │   ├── core/      # Core configurations
 │   │   ├── models/    # Data models and schemas
 │   │   └── services/  # Business logic
-│   ├── data/          # Database storage
+│   ├── data/          # Data storage directory
 │   └── tests/         # Backend tests
 └── frontend/          # React frontend
     ├── Dockerfile     # Frontend container configuration
