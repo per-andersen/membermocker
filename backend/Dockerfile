@@ -24,10 +24,6 @@ RUN pip install --no-cache-dir -e .
 
 # Copy the rest of the application
 COPY app/ ./app/
-COPY data/ ./data/
-
-# Create data directory if it doesn't exist
-RUN mkdir -p /app/data
 
 # Create a non-root user
 RUN useradd -m -u 1000 appuser && \

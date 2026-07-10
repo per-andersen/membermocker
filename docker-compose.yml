@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=membermocker
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - membermocker_postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ./backend
@@ -10,6 +27,15 @@ services:
     environment:
       - PYTHONPATH=/app
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=membermocker
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_SSLMODE=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/docs"]
       interval: 10s
@@ -34,3 +60,4 @@ services:
 
 volumes:
   membermocker_backend_data:
+  membermocker_postgres_data:
