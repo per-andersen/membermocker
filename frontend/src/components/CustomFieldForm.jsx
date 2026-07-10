@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { createCustomField } from '../services/api';
+import { createCustomField, getApiErrorMessage } from '../services/api';
+
+const inputClass = "block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm";
 
 const fieldTypes = [
   { value: 'text', label: 'Text', inputType: 'text', rules: ['min_length', 'max_length'], hint: 'Any text, e.g. "Gold" or "Vegetarian"' },
@@ -11,6 +13,7 @@ const fieldTypes = [
 
 export default function CustomFieldForm({ onFieldCreated }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [field, setField] = useState({
     name: '',
     field_type: 'text',
@@ -43,6 +46,7 @@ export default function CustomFieldForm({ onFieldCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
     try {
       const newField = await createCustomField({
@@ -56,9 +60,9 @@ export default function CustomFieldForm({ onFieldCreated }) {
         validation_rules: {},
         default_value: ''
       });
-    } catch (error) {
-      console.error('Error creating custom field:', error);
-      alert('Failed to create custom field. Please try again.');
+    } catch (err) {
+      console.error('Error creating custom field:', err);
+      setError(getApiErrorMessage(err, 'The field could not be created. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -69,15 +73,16 @@ export default function CustomFieldForm({ onFieldCreated }) {
 
     return selectedType.rules.map(rule => (
       <div key={rule} className="space-y-2">
-        <label className="block text-sm font-medium text-gray-300">
+        <label htmlFor={`field-rule-${rule}`} className="block text-sm font-medium text-gray-300">
           {rule.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
         </label>
         <input
+          id={`field-rule-${rule}`}
           type={rule.includes('date') ? 'date' : 'number'}
           name={rule}
           value={field.validation_rules[rule] || ''}
           onChange={handleRuleChange}
-          className="block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={inputClass}
         />
       </div>
     ));
@@ -87,23 +92,26 @@ export default function CustomFieldForm({ onFieldCreated }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">Field Name</label>
+          <label htmlFor="field-name" className="block text-sm font-medium text-gray-300">Field Name</label>
           <input
+            id="field-name"
             type="text"
             name="name"
             value={field.name}
             onChange={handleChange}
-            className="block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            placeholder="e.g. Membership Level"
+            className={inputClass}
             required
           />
         </div>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">What kind of data is it?</label>
+          <label htmlFor="field-type" className="block text-sm font-medium text-gray-300">What kind of data is it?</label>
           <select
+            id="field-type"
             name="field_type"
             value={field.field_type}
             onChange={handleChange}
-            className="block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className={inputClass}
           >
             {fieldTypes.map(type => (
               <option key={type.value} value={type.value}>
@@ -116,15 +124,16 @@ export default function CustomFieldForm({ onFieldCreated }) {
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-300">
+        <label htmlFor="field-default" className="block text-sm font-medium text-gray-300">
           Value for existing members
         </label>
         <input
+          id="field-default"
           type={selectedType?.inputType || 'text'}
           name="default_value"
           value={field.default_value}
           onChange={handleChange}
-          className="block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={inputClass}
         />
         <p className="text-xs text-gray-400">
           Everyone already in your member list gets this value. You can change it per member afterwards.
@@ -144,6 +153,12 @@ export default function CustomFieldForm({ onFieldCreated }) {
           <p className="text-xs text-gray-400">No rules available for this field type.</p>
         )}
       </div>
+
+      {error && (
+        <div role="alert" className="rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-sm px-4 py-3">
+          {error}
+        </div>
+      )}
 
       <button
         type="submit"
