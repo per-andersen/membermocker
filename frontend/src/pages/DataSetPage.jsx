@@ -9,6 +9,7 @@ export default function DataSetPage() {
   const [members, setMembers] = useState([]);
   const [error, setError] = useState(null);
   const [showCustomFields, setShowCustomFields] = useState(false);
+  const [fieldListVersion, setFieldListVersion] = useState(0);
 
   useEffect(() => {
     loadMembers();
@@ -27,8 +28,9 @@ export default function DataSetPage() {
     }
   };
 
-  const handleGenerate = (newMembers) => {
-    setMembers(prev => [...prev, ...newMembers]);
+  const handleGenerate = () => {
+    // Refetch so ordering matches what a page reload would show
+    loadMembers();
   };
 
   const handleMemberDeleted = (deletedId) => {
@@ -44,6 +46,8 @@ export default function DataSetPage() {
   const handleCustomFieldCreated = () => {
     // Reload all members to get updated custom field values
     loadMembers();
+    // Remount the field list so it picks up the new field
+    setFieldListVersion(v => v + 1);
   };
 
   const handleCustomFieldDeleted = () => {
@@ -78,7 +82,7 @@ export default function DataSetPage() {
               </div>
               <div>
                 <h3 className="text-lg font-medium mb-4">Custom Fields</h3>
-                <CustomFieldList onFieldDeleted={handleCustomFieldDeleted} />
+                <CustomFieldList key={fieldListVersion} onFieldDeleted={handleCustomFieldDeleted} />
               </div>
             </div>
           </div>
