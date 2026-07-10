@@ -150,15 +150,23 @@ The application will be available at the URLs listed in the installation section
 
 ### Web Interface
 
-1. Navigate to http://localhost:5173
+1. Navigate to http://localhost:5173 (development) or http://localhost (production)
 2. Use the form to configure your data generation parameters
 3. Generate and download your mock data set
 
 ### API Endpoints
 
-- `POST /api/generate`: Generate a new mock dataset
-- `GET /api/templates`: List available data templates
-- `GET /api/statistics`: Get statistics about generated datasets
+- `POST /generate`: Generate a new mock dataset
+- `GET /members`: List all generated members
+- `GET /members/{member_id}`: Get a specific member
+- `PATCH /members/{member_id}`: Update an existing member
+- `DELETE /members/{member_id}`: Delete a member
+- `GET /download/{format}`: Download members as CSV or Excel
+- `POST /custom-fields`: Create a custom field
+- `GET /custom-fields`: List custom fields
+- `GET /custom-fields/{field_id}`: Get a custom field
+- `PATCH /custom-fields/{field_id}`: Update a custom field
+- `DELETE /custom-fields/{field_id}`: Delete a custom field
 
 For detailed API documentation, visit the Swagger UI at http://localhost:8000/docs
 
@@ -167,8 +175,8 @@ For detailed API documentation, visit the Swagger UI at http://localhost:8000/do
 ```
 membermocker/
 ├── LICENSE
-├── prd.md              # Project Requirements Document
-├── readme.md
+├── PRD.md              # Project Requirements Document
+├── README.md
 ├── OLLAMA.md          # Ollama setup instructions
 ├── docker-compose.yml # Production Docker Compose configuration
 ├── docker-compose.dev.yml # Development Docker Compose configuration
@@ -184,7 +192,8 @@ membermocker/
 │   │   ├── models/    # Data models and schemas
 │   │   └── services/  # Business logic
 │   ├── data/          # Data storage directory
-│   └── tests/         # Backend tests
+│   ├── tests/         # Backend tests
+│   └── testing.md     # Testing documentation
 └── frontend/          # React frontend
     ├── Dockerfile     # Frontend container configuration
     ├── index.html     # HTML entry point
