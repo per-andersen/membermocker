@@ -1,29 +1,32 @@
 import React, { useState } from 'react';
 import { createCustomField } from '../services/api';
 
+const fieldTypes = [
+  { value: 'text', label: 'Text', inputType: 'text', rules: ['min_length', 'max_length'], hint: 'Any text, e.g. "Gold" or "Vegetarian"' },
+  { value: 'number', label: 'Number', inputType: 'number', rules: ['min', 'max'], hint: 'A number, e.g. 100 or 3.5' },
+  { value: 'alphanumeric', label: 'Letters & Digits', inputType: 'text', rules: ['length'], hint: 'Letters and digits only, no spaces, e.g. "AB123"' },
+  { value: 'date', label: 'Date', inputType: 'date', rules: ['min_date', 'max_date'], hint: 'A calendar date' },
+  { value: 'datetime', label: 'Date & Time', inputType: 'datetime-local', rules: [], hint: 'A date with a time of day' },
+];
+
 export default function CustomFieldForm({ onFieldCreated }) {
   const [isLoading, setIsLoading] = useState(false);
   const [field, setField] = useState({
     name: '',
-    field_type: 'string',
-    validation_rules: {}
+    field_type: 'text',
+    validation_rules: {},
+    default_value: ''
   });
 
-  const fieldTypes = [
-    { value: 'string', label: 'Text', rules: ['min_length', 'max_length'] },
-    { value: 'integer', label: 'Number', rules: ['min', 'max', 'digits'] },
-    { value: 'alphanumeric', label: 'Alphanumeric', rules: ['length'] },
-    { value: 'email', label: 'Email', rules: [] },
-    { value: 'phone', label: 'Phone Number', rules: ['format'] },
-    { value: 'date', label: 'Date', rules: ['min_date', 'max_date'] }
-  ];
+  const selectedType = fieldTypes.find(type => type.value === field.field_type);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setField(prev => ({
       ...prev,
       [name]: value,
-      validation_rules: name === 'field_type' ? {} : prev.validation_rules
+      // Rules and default don't carry over between types
+      ...(name === 'field_type' ? { validation_rules: {}, default_value: '' } : {})
     }));
   };
 
@@ -42,12 +45,16 @@ export default function CustomFieldForm({ onFieldCreated }) {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const newField = await createCustomField(field);
+      const newField = await createCustomField({
+        ...field,
+        default_value: field.default_value === '' ? null : field.default_value
+      });
       onFieldCreated(newField);
       setField({
         name: '',
-        field_type: 'string',
-        validation_rules: {}
+        field_type: 'text',
+        validation_rules: {},
+        default_value: ''
       });
     } catch (error) {
       console.error('Error creating custom field:', error);
@@ -58,8 +65,7 @@ export default function CustomFieldForm({ onFieldCreated }) {
   };
 
   const getValidationFields = () => {
-    const selectedType = fieldTypes.find(type => type.value === field.field_type);
-    if (!selectedType) return null;
+    if (!selectedType?.rules.length) return null;
 
     return selectedType.rules.map(rule => (
       <div key={rule} className="space-y-2">
@@ -67,7 +73,7 @@ export default function CustomFieldForm({ onFieldCreated }) {
           {rule.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
         </label>
         <input
-          type={rule.includes('length') || rule.includes('digits') ? 'number' : 'text'}
+          type={rule.includes('date') ? 'date' : 'number'}
           name={rule}
           value={field.validation_rules[rule] || ''}
           onChange={handleRuleChange}
@@ -92,7 +98,7 @@ export default function CustomFieldForm({ onFieldCreated }) {
           />
         </div>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">Field Type</label>
+          <label className="block text-sm font-medium text-gray-300">What kind of data is it?</label>
           <select
             name="field_type"
             value={field.field_type}
@@ -105,21 +111,45 @@ export default function CustomFieldForm({ onFieldCreated }) {
               </option>
             ))}
           </select>
+          {selectedType && <p className="text-xs text-gray-400">{selectedType.hint}</p>}
         </div>
       </div>
 
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-300">
+          Value for existing members
+        </label>
+        <input
+          type={selectedType?.inputType || 'text'}
+          name="default_value"
+          value={field.default_value}
+          onChange={handleChange}
+          className="block w-full rounded-lg border-gray-600 bg-gray-700 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        <p className="text-xs text-gray-400">
+          Everyone already in your member list gets this value. You can change it per member afterwards.
+          {field.field_type === 'number' && ' If left empty, members get 0.'}
+          {field.field_type === 'date' && " If left empty, members get today's date."}
+          {field.field_type === 'datetime' && ' If left empty, members get the current date and time.'}
+        </p>
+      </div>
+
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-gray-300">Validation Rules</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {getValidationFields()}
-        </div>
+        <h3 className="text-sm font-medium text-gray-300">Validation Rules (optional)</h3>
+        {selectedType?.rules.length ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {getValidationFields()}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No rules available for this field type.</p>
+        )}
       </div>
 
       <button
         type="submit"
         disabled={isLoading}
         className={`w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-colors ${
-          isLoading 
+          isLoading
             ? 'bg-blue-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500'
         }`}

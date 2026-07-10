@@ -23,6 +23,9 @@ def generate_members(config: MemberConfig) -> List[Member]:
 
     members = []
     try:
+        db.execute("SELECT id, name, default_value FROM custom_field_definitions")
+        field_defaults = db.fetchall()
+
         for i in range(config.count):
             response = chat(
                 messages=[
@@ -36,7 +39,7 @@ def generate_members(config: MemberConfig) -> List[Member]:
             )
 
             member = Member.model_validate_json(response.message.content)
-            member.custom_fields = None
+            member.custom_fields = {name: default for _, name, default in field_defaults} or None
             if i < len(addresses_with_coords):
                 address, lat, lon = addresses_with_coords[i]
                 member.address = address
@@ -59,6 +62,13 @@ def generate_members(config: MemberConfig) -> List[Member]:
                 member.latitude,
                 member.longitude
             ])
+
+            # New members get the default value for every existing custom field
+            if field_defaults:
+                db.executemany(
+                    "INSERT INTO custom_field_values (member_id, field_id, value) VALUES (%s, %s, %s)",
+                    [(str(member.id), str(field_id), default) for field_id, _, default in field_defaults],
+                )
 
             db.commit()
             members.append(member)

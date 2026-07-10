@@ -93,8 +93,14 @@ def _initialize_tables(conn: Connection) -> None:
                 name VARCHAR(255) NOT NULL UNIQUE,
                 field_type VARCHAR(50) NOT NULL,
                 validation_rules TEXT NOT NULL DEFAULT '{}',
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                default_value TEXT NOT NULL DEFAULT ''
             )
+        """)
+
+        cur.execute("""
+            ALTER TABLE custom_field_definitions
+            ADD COLUMN IF NOT EXISTS default_value TEXT NOT NULL DEFAULT ''
         """)
 
         cur.execute("""
@@ -104,6 +110,17 @@ def _initialize_tables(conn: Connection) -> None:
                 value TEXT NOT NULL,
                 PRIMARY KEY (member_id, field_id)
             )
+        """)
+
+        # Migrate legacy field type names to the current data-type-based set
+        cur.execute("""
+            UPDATE custom_field_definitions SET field_type = CASE field_type
+                WHEN 'string' THEN 'text'
+                WHEN 'integer' THEN 'number'
+                WHEN 'email' THEN 'text'
+                WHEN 'phone' THEN 'text'
+            END
+            WHERE field_type IN ('string', 'integer', 'email', 'phone')
         """)
 
     conn.commit()

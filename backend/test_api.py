@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.config import get_db
 from app.services.generator import get_real_addresses
+from app.models.custom_field import CustomFieldValue
 from unittest.mock import patch, MagicMock
 from uuid import uuid4
 from typing import List, Tuple
@@ -252,7 +253,7 @@ def test_create_custom_field(test_db):
     """Test creating a custom field"""
     field_data = {
         "name": "membership_level",
-        "field_type": "string",
+        "field_type": "text",
         "validation_rules": {
             "min_length": 2,
             "max_length": 20
@@ -271,12 +272,12 @@ def test_list_custom_fields(test_db):
     fields = [
         {
             "name": "membership_level",
-            "field_type": "string",
+            "field_type": "text",
             "validation_rules": {"min_length": 2}
         },
         {
             "name": "points",
-            "field_type": "integer",
+            "field_type": "number",
             "validation_rules": {"min": 0}
         }
     ]
@@ -294,7 +295,7 @@ def test_list_custom_fields(test_db):
 def test_update_custom_field(test_db):
     field_data = {
         "name": "membership_level",
-        "field_type": "string",
+        "field_type": "text",
         "validation_rules": {"min_length": 2}
     }
     
@@ -316,7 +317,7 @@ def test_update_custom_field(test_db):
 def test_delete_custom_field(test_db):
     field_data = {
         "name": "membership_level",
-        "field_type": "string",
+        "field_type": "text",
         "validation_rules": {}
     }
     
@@ -333,7 +334,7 @@ def test_delete_custom_field(test_db):
 def test_member_with_custom_fields(test_db, mock_addresses, mock_chat):
     field_data = {
         "name": "membership_level",
-        "field_type": "string",
+        "field_type": "text",
         "validation_rules": {}
     }
     client.post("/custom-fields", json=field_data)
@@ -402,3 +403,83 @@ def test_invalid_custom_field_data(test_db):
         "validation_rules": {}
     })
     assert response.status_code == 422
+
+def test_custom_field_default_backfill(test_db, mock_addresses, mock_chat):
+    """Existing members get the default value when a new custom field is added"""
+    client.post("/generate", json={
+        "city": "Copenhagen",
+        "country": "Denmark",
+        "count": 2
+    })
+
+    # Explicit default is applied to existing members
+    client.post("/custom-fields", json={
+        "name": "points",
+        "field_type": "number",
+        "validation_rules": {},
+        "default_value": "100"
+    })
+    members = client.get("/members").json()
+    assert all(m["custom_fields"]["points"] == "100" for m in members)
+
+    # Type-based default when none is given
+    client.post("/custom-fields", json={
+        "name": "signup_date",
+        "field_type": "date",
+        "validation_rules": {}
+    })
+    members = client.get("/members").json()
+    assert all(m["custom_fields"]["signup_date"] == date.today().isoformat() for m in members)
+
+    # Members generated AFTER the fields exist also get the defaults
+    new_members = client.post("/generate", json={
+        "city": "Copenhagen",
+        "country": "Denmark",
+        "count": 1
+    }).json()
+    assert new_members[0]["custom_fields"]["points"] == "100"
+    members = client.get("/members").json()
+    assert len(members) == 3
+    assert all(m["custom_fields"]["points"] == "100" for m in members)
+
+
+def test_custom_field_invalid_default(test_db):
+    """Defaults that don't match the field type are rejected with a clear message"""
+    response = client.post("/custom-fields", json={
+        "name": "points",
+        "field_type": "number",
+        "validation_rules": {},
+        "default_value": "abc"
+    })
+    assert response.status_code == 422
+    assert "number" in response.json()["detail"]
+
+    response = client.post("/custom-fields", json={
+        "name": "code",
+        "field_type": "alphanumeric",
+        "validation_rules": {},
+        "default_value": "no spaces!"
+    })
+    assert response.status_code == 422
+
+
+def test_custom_field_datetime_type(test_db):
+    response = client.post("/custom-fields", json={
+        "name": "last_login",
+        "field_type": "datetime",
+        "validation_rules": {},
+        "default_value": "2026-01-15T14:30"
+    })
+    assert response.status_code == 200
+    assert response.json()["field_type"] == "datetime"
+
+
+def test_custom_field_legacy_types_rejected(test_db):
+    """Old specific types like email/phone are no longer accepted"""
+    for legacy in ["string", "integer", "email", "phone"]:
+        response = client.post("/custom-fields", json={
+            "name": f"legacy_{legacy}",
+            "field_type": legacy,
+            "validation_rules": {}
+        })
+        assert response.status_code == 422

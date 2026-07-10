@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from app.services.generator import generate_members
 from app.models.member import MemberConfig, Member, MemberUpdate
-from app.models.custom_field import CustomFieldDefinition, CustomFieldCreate, CustomFieldUpdate, CustomFieldValue
+from app.models.custom_field import CustomFieldDefinition, CustomFieldCreate, CustomFieldUpdate, CustomFieldValue, VALID_FIELD_TYPES
+from datetime import date, datetime
 from app.core.config import get_db
 from typing import List, Any, Optional
 from uuid import UUID
@@ -237,35 +238,78 @@ def download_members(format: str):
     else:
         raise HTTPException(status_code=400, detail="Unsupported format")
 
+def _default_value_for_type(field_type: str) -> str:
+    """Type-appropriate default used to backfill existing members."""
+    if field_type == "number":
+        return "0"
+    if field_type == "date":
+        return date.today().isoformat()
+    if field_type == "datetime":
+        return datetime.now().isoformat(timespec="minutes")
+    return ""
+
+
+def _validate_value_for_type(value: str, field_type: str) -> None:
+    """Raise a user-friendly 422 if a value doesn't match the field type."""
+    if value == "":
+        return
+    try:
+        if field_type == "number":
+            float(value)
+        elif field_type == "date":
+            date.fromisoformat(value)
+        elif field_type == "datetime":
+            datetime.fromisoformat(value)
+        elif field_type == "alphanumeric":
+            if not value.isalnum():
+                raise ValueError
+    except ValueError:
+        messages = {
+            "number": "The default value must be a number",
+            "date": "The default value must be a date (YYYY-MM-DD)",
+            "datetime": "The default value must be a date and time (YYYY-MM-DDTHH:MM)",
+            "alphanumeric": "The default value may only contain letters and digits",
+        }
+        raise HTTPException(status_code=422, detail=messages[field_type])
+
+
 @router.post("/custom-fields", response_model=CustomFieldDefinition)
 def create_custom_field(field: CustomFieldCreate):
     if not field.name:
         raise HTTPException(status_code=422, detail="Field name cannot be empty")
 
-    valid_field_types = ["string", "integer", "alphanumeric", "email", "phone", "date"]
-    if field.field_type not in valid_field_types:
+    if field.field_type not in VALID_FIELD_TYPES:
         raise HTTPException(
-            status_code=422, detail=f"Field type must be one of: {', '.join(valid_field_types)}"
+            status_code=422, detail=f"Field type must be one of: {', '.join(VALID_FIELD_TYPES)}"
         )
 
+    if field.default_value is not None:
+        _validate_value_for_type(field.default_value, field.field_type)
+
     db = get_db()
-    field_def = CustomFieldDefinition(**field.model_dump())
+    field_def = CustomFieldDefinition(**field.model_dump(exclude={"default_value"}))
 
     try:
+        default_value = (
+            field.default_value
+            if field.default_value is not None
+            else _default_value_for_type(field.field_type)
+        )
+
         db.execute(
-            "INSERT INTO custom_field_definitions (id, name, field_type, validation_rules) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO custom_field_definitions (id, name, field_type, validation_rules, default_value) VALUES (%s, %s, %s, %s, %s)",
             [
                 str(field_def.id),
                 field_def.name,
                 field_def.field_type,
                 json.dumps(field_def.validation_rules),
+                default_value,
             ],
         )
 
         db.execute("SELECT id FROM members")
         members = db.fetchall()
         if members:
-            default_value = ""  # TODO: Make this more sophisticated based on field type
             values = [(str(member[0]), str(field_def.id), default_value) for member in members]
             db.executemany(
                 "INSERT INTO custom_field_values (member_id, field_id, value) VALUES (%s, %s, %s)",

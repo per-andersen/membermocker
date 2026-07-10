@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { listCustomFields, deleteCustomField } from '../services/api';
 
+const TYPE_LABELS = {
+  text: 'Text',
+  number: 'Number',
+  alphanumeric: 'Letters & Digits',
+  date: 'Date',
+  datetime: 'Date & Time',
+};
+
 export default function CustomFieldList({ onFieldDeleted }) {
   const [fields, setFields] = useState([]);
   const [error, setError] = useState(null);
@@ -49,7 +57,7 @@ export default function CustomFieldList({ onFieldDeleted }) {
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-medium text-white">{field.name}</h3>
-              <p className="text-sm text-gray-400">Type: {field.field_type}</p>
+              <p className="text-sm text-gray-400">Type: {TYPE_LABELS[field.field_type] || field.field_type}</p>
               {Object.entries(field.validation_rules).length > 0 && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-400">Validation Rules:</p>
