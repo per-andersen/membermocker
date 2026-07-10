@@ -290,6 +290,15 @@ def create_custom_field(field: CustomFieldCreate):
     field_def = CustomFieldDefinition(**field.model_dump(exclude={"default_value"}))
 
     try:
+        db.execute(
+            "SELECT 1 FROM custom_field_definitions WHERE name = %s", [field_def.name]
+        )
+        if db.fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail=f'A field named "{field_def.name}" already exists. Please choose a different name.',
+            )
+
         default_value = (
             field.default_value
             if field.default_value is not None
