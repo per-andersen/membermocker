@@ -58,8 +58,8 @@ export default function MapView({ members }) {
         });
 
         // Fit map to show all markers
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds);
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { maxZoom: 15, padding: [30, 30] });
         }
       }
     }
