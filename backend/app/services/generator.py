@@ -51,7 +51,7 @@ def generate_members(config: MemberConfig) -> List[Member]:
                 INSERT INTO members
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, [
-                str(member.id),
+                member.id,
                 member.date_member_joined_group,
                 member.first_name,
                 member.surname,
@@ -67,7 +67,7 @@ def generate_members(config: MemberConfig) -> List[Member]:
             if field_defaults:
                 db.executemany(
                     "INSERT INTO custom_field_values (member_id, field_id, value) VALUES (%s, %s, %s)",
-                    [(str(member.id), str(field_id), default) for field_id, _, default in field_defaults],
+                    [(member.id, field_id, default) for field_id, _, default in field_defaults],
                 )
 
             db.commit()

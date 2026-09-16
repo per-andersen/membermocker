@@ -7,6 +7,7 @@ from datetime import date, datetime
 from app.core.config import get_db
 from typing import List, Any, Optional
 from uuid import UUID
+from psycopg.types.json import Jsonb
 from io import BytesIO
 from io import StringIO
 from fastapi.responses import StreamingResponse
@@ -15,15 +16,6 @@ import csv
 
 
 router = APIRouter()
-
-def parse_json_field(field: Any) -> Optional[dict]:
-    """Parse a field that might be a JSON string into a dictionary."""
-    if isinstance(field, str):
-        try:
-            return json.loads(field)
-        except json.JSONDecodeError:
-            return None
-    return field if isinstance(field, dict) else None
 
 def custom_fields_from_json(raw: Any) -> Optional[dict]:
     """Convert a json_agg result (a list of single-entry dicts, possibly still
@@ -62,8 +54,8 @@ def list_members(
                     '[]'::json
                 ) as custom_fields
             FROM members m
-            LEFT JOIN custom_field_values cfv ON m.id::uuid = cfv.member_id::uuid
-            LEFT JOIN custom_field_definitions cf ON cfv.field_id::uuid = cf.id::uuid
+            LEFT JOIN custom_field_values cfv ON m.id = cfv.member_id
+            LEFT JOIN custom_field_definitions cf ON cfv.field_id = cf.id
             GROUP BY m.id, m.date_member_joined_group, m.first_name, m.surname,
                      m.birthday, m.phone_number, m.email, m.address, m.latitude, m.longitude
             ORDER BY m.date_member_joined_group, m.id
@@ -76,7 +68,7 @@ def list_members(
 
     return [
         Member(
-            id=row[0] if isinstance(row[0], UUID) else UUID(row[0]),
+            id=row[0],
             date_member_joined_group=row[1],
             first_name=row[2],
             surname=row[3],
@@ -105,12 +97,12 @@ def get_member(member_id: UUID):
                     '[]'::json
                 ) as custom_fields
             FROM members m
-            LEFT JOIN custom_field_values cfv ON m.id::uuid = cfv.member_id::uuid
-            LEFT JOIN custom_field_definitions cf ON cfv.field_id::uuid = cf.id::uuid
-            WHERE m.id::uuid = %s
+            LEFT JOIN custom_field_values cfv ON m.id = cfv.member_id
+            LEFT JOIN custom_field_definitions cf ON cfv.field_id = cf.id
+            WHERE m.id = %s
             GROUP BY m.id, m.date_member_joined_group, m.first_name, m.surname,
                      m.birthday, m.phone_number, m.email, m.address, m.latitude, m.longitude
-        """, [str(member_id)])
+        """, [member_id])
 
         result = db.fetchone()
     finally:
@@ -120,7 +112,7 @@ def get_member(member_id: UUID):
         raise HTTPException(status_code=404, detail="Member not found")
 
     return Member(
-        id=result[0] if isinstance(result[0], UUID) else UUID(result[0]),
+        id=result[0],
         date_member_joined_group=result[1],
         first_name=result[2],
         surname=result[3],
@@ -138,7 +130,7 @@ def update_member(member_id: UUID, member_update: MemberUpdate):
     db = get_db()
     try:
         db.execute(
-            "SELECT 1 FROM members WHERE id::uuid = %s", [str(member_id)]
+            "SELECT 1 FROM members WHERE id = %s", [member_id]
         )
         if not db.fetchone():
             raise HTTPException(status_code=404, detail="Member not found")
@@ -150,8 +142,8 @@ def update_member(member_id: UUID, member_update: MemberUpdate):
 
         if update_fields:
             set_clause = ", ".join(f"{k} = %s" for k in update_fields.keys())
-            values = list(update_fields.values()) + [str(member_id)]
-            db.execute(f"UPDATE members SET {set_clause} WHERE id::uuid = %s", values)
+            values = list(update_fields.values()) + [member_id]
+            db.execute(f"UPDATE members SET {set_clause} WHERE id = %s", values)
 
         if member_update.custom_fields:
             for field_name, value in member_update.custom_fields.items():
@@ -164,7 +156,7 @@ def update_member(member_id: UUID, member_update: MemberUpdate):
                     field_id = field_result[0]
                     db.execute(
                         "INSERT INTO custom_field_values (member_id, field_id, value) VALUES (%s, %s, %s) ON CONFLICT (member_id, field_id) DO UPDATE SET value = excluded.value",
-                        [str(member_id), field_id, value],
+                        [member_id, field_id, value],
                     )
 
         db.commit()
@@ -178,17 +170,17 @@ def delete_member(member_id: UUID):
     db = get_db()
     try:
         db.execute(
-            "SELECT 1 FROM members WHERE id::uuid = %s", [str(member_id)]
+            "SELECT 1 FROM members WHERE id = %s", [member_id]
         )
         if not db.fetchone():
             raise HTTPException(status_code=404, detail="Member not found")
 
         db.execute(
-            "DELETE FROM custom_field_values WHERE member_id::uuid = %s",
-            [str(member_id)],
+            "DELETE FROM custom_field_values WHERE member_id = %s",
+            [member_id],
         )
         db.execute(
-            "DELETE FROM members WHERE id::uuid = %s", [str(member_id)]
+            "DELETE FROM members WHERE id = %s", [member_id]
         )
         db.commit()
     finally:
@@ -313,10 +305,10 @@ def create_custom_field(field: CustomFieldCreate):
         db.execute(
             "INSERT INTO custom_field_definitions (id, name, field_type, validation_rules, default_value) VALUES (%s, %s, %s, %s, %s)",
             [
-                str(field_def.id),
+                field_def.id,
                 field_def.name,
                 field_def.field_type,
-                json.dumps(field_def.validation_rules),
+                Jsonb(field_def.validation_rules),
                 default_value,
             ],
         )
@@ -324,7 +316,7 @@ def create_custom_field(field: CustomFieldCreate):
         db.execute("SELECT id FROM members")
         members = db.fetchall()
         if members:
-            values = [(str(member[0]), str(field_def.id), default_value) for member in members]
+            values = [(member[0], field_def.id, default_value) for member in members]
             db.executemany(
                 "INSERT INTO custom_field_values (member_id, field_id, value) VALUES (%s, %s, %s)",
                 values,
@@ -347,10 +339,10 @@ def list_custom_fields():
 
     return [
         CustomFieldDefinition(
-            id=row[0] if isinstance(row[0], UUID) else UUID(row[0]),
+            id=row[0],
             name=row[1],
             field_type=row[2],
-            validation_rules=parse_json_field(row[3]) or {},
+            validation_rules=row[3] or {},
             created_at=row[4],
         )
         for row in (result or [])
@@ -361,7 +353,7 @@ def get_custom_field(field_id: UUID):
     db = get_db()
     try:
         db.execute(
-            "SELECT * FROM custom_field_definitions WHERE id::uuid = %s", [str(field_id)]
+            "SELECT * FROM custom_field_definitions WHERE id = %s", [field_id]
         )
         result = db.fetchone()
     finally:
@@ -371,10 +363,10 @@ def get_custom_field(field_id: UUID):
         raise HTTPException(status_code=404, detail="Custom field not found")
 
     return CustomFieldDefinition(
-        id=result[0] if isinstance(result[0], UUID) else UUID(result[0]),
+        id=result[0],
         name=result[1],
         field_type=result[2],
-        validation_rules=parse_json_field(result[3]) or {},
+        validation_rules=result[3] or {},
         created_at=result[4],
     )
 
@@ -383,7 +375,7 @@ def update_custom_field(field_id: UUID, field_update: CustomFieldUpdate):
     db = get_db()
     try:
         db.execute(
-            "SELECT 1 FROM custom_field_definitions WHERE id::uuid = %s", [str(field_id)]
+            "SELECT 1 FROM custom_field_definitions WHERE id = %s", [field_id]
         )
         if not db.fetchone():
             raise HTTPException(status_code=404, detail="Custom field not found")
@@ -393,20 +385,18 @@ def update_custom_field(field_id: UUID, field_update: CustomFieldUpdate):
             raise HTTPException(status_code=400, detail="No fields to update")
 
         if "validation_rules" in update_fields:
-            if isinstance(update_fields["validation_rules"], str):
+            rules = update_fields["validation_rules"]
+            if isinstance(rules, str):
                 try:
-                    update_fields["validation_rules"] = json.dumps(
-                        json.loads(update_fields["validation_rules"])
-                    )
+                    rules = json.loads(rules)
                 except json.JSONDecodeError:
-                    update_fields["validation_rules"] = "{}"
-            else:
-                update_fields["validation_rules"] = json.dumps(update_fields["validation_rules"])
+                    rules = {}
+            update_fields["validation_rules"] = Jsonb(rules)
 
         set_clause = ", ".join(f"{k} = %s" for k in update_fields.keys())
-        values = list(update_fields.values()) + [str(field_id)]
+        values = list(update_fields.values()) + [field_id]
 
-        db.execute(f"UPDATE custom_field_definitions SET {set_clause} WHERE id::uuid = %s", values)
+        db.execute(f"UPDATE custom_field_definitions SET {set_clause} WHERE id = %s", values)
         db.commit()
     finally:
         db.close()
@@ -418,16 +408,16 @@ def delete_custom_field(field_id: UUID):
     db = get_db()
     try:
         db.execute(
-            "SELECT 1 FROM custom_field_definitions WHERE id::uuid = %s", [str(field_id)]
+            "SELECT 1 FROM custom_field_definitions WHERE id = %s", [field_id]
         )
         if not db.fetchone():
             raise HTTPException(status_code=404, detail="Custom field not found")
 
         db.execute(
-            "DELETE FROM custom_field_values WHERE field_id::uuid = %s", [str(field_id)]
+            "DELETE FROM custom_field_values WHERE field_id = %s", [field_id]
         )
         db.execute(
-            "DELETE FROM custom_field_definitions WHERE id::uuid = %s", [str(field_id)]
+            "DELETE FROM custom_field_definitions WHERE id = %s", [field_id]
         )
         db.commit()
     finally:

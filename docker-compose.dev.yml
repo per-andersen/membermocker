@@ -22,7 +22,6 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./backend/app:/app/app
-      - membermocker_backend_data:/app/data
     ports:
       - "8000:8000"
     environment:
@@ -68,5 +67,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  membermocker_backend_data:
   membermocker_postgres_data:

@@ -147,16 +147,19 @@ idempotent migration statement there so existing volumes upgrade automatically o
 Tables:
 
 - `members` — id (UUID PK), names, birthday, phone, email, address, latitude/longitude
-- `custom_field_definitions` — id, name (UNIQUE), field_type, validation_rules (JSON as TEXT),
+- `custom_field_definitions` — id, name (UNIQUE), field_type, validation_rules (JSONB),
   created_at, **default_value** (applied to new members at generation time)
 - `custom_field_values` — (member_id, field_id) PK, value TEXT, FKs with ON DELETE CASCADE
 
 ### psycopg3 pitfalls specific to this codebase
 
 - **psycopg3 returns `json`/`jsonb` columns as already-parsed Python objects** (lists/dicts),
-  not strings. Do not `json.loads()` them blindly. `custom_fields_from_json()` in `routes.py`
-  handles both shapes — reuse it. (A helper that assumed strings silently turned every
+  not strings. Do not `json.loads()` them blindly. `validation_rules` is JSONB, so reads give
+  you a `dict` directly. `custom_fields_from_json()` in `routes.py` handles both shapes for the
+  `json_agg` payload — reuse it. (A helper that assumed strings silently turned every
   custom-field payload into `None` after the DuckDB→Postgres migration.)
+- **Write dicts to JSONB columns through `psycopg.types.json.Jsonb`**, not `json.dumps()`.
+  A dumped string is sent as `text` and will not reliably coerce.
 - **`json_build_object(NULL, NULL)` raises an error** ("null value not allowed for object
   key"). Any `json_agg(json_build_object(...))` over a LEFT JOIN must carry
   `FILTER (WHERE <joined column> IS NOT NULL)`. Both member queries do this; keep it when
@@ -164,10 +167,11 @@ Tables:
 - **Pagination requires a deterministic ORDER BY.** `GET /members` orders by
   `(date_member_joined_group, id)` and takes `limit` (default/max 1000) and `offset` params.
   Never add an unordered LIMIT/OFFSET query.
-- UUID columns come back as `uuid.UUID` objects; existing code defensively handles both UUID
-  and string. Row access is positional (`row[0]`), so column order in SELECTs matters —
-  `SELECT *` on `custom_field_definitions` is only safe because `default_value` was appended
-  as the last column.
+- **UUID columns come back as `uuid.UUID`, and `uuid.UUID` params are adapted natively.**
+  Pass `member_id` straight through — no `str()` round-trip, and no `::uuid` casts in SQL
+  (those were a DuckDB-era habit and have been removed). Row access is positional (`row[0]`),
+  so column order in SELECTs matters — `SELECT *` on `custom_field_definitions` is only safe
+  because `default_value` was appended as the last column.
 
 ## Custom Fields — Domain Rules
 

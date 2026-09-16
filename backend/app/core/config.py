@@ -92,7 +92,7 @@ def _initialize_tables(conn: Connection) -> None:
                 id UUID PRIMARY KEY,
                 name VARCHAR(255) NOT NULL UNIQUE,
                 field_type VARCHAR(50) NOT NULL,
-                validation_rules TEXT NOT NULL DEFAULT '{}',
+                validation_rules JSONB NOT NULL DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 default_value TEXT NOT NULL DEFAULT ''
             )
@@ -101,6 +101,25 @@ def _initialize_tables(conn: Connection) -> None:
         cur.execute("""
             ALTER TABLE custom_field_definitions
             ADD COLUMN IF NOT EXISTS default_value TEXT NOT NULL DEFAULT ''
+        """)
+
+        # Migrate validation_rules from its original TEXT representation to JSONB
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'custom_field_definitions'
+                      AND column_name = 'validation_rules'
+                      AND data_type <> 'jsonb'
+                ) THEN
+                    ALTER TABLE custom_field_definitions
+                        ALTER COLUMN validation_rules DROP DEFAULT,
+                        ALTER COLUMN validation_rules TYPE JSONB
+                            USING validation_rules::jsonb,
+                        ALTER COLUMN validation_rules SET DEFAULT '{}'::jsonb;
+                END IF;
+            END $$
         """)
 
         cur.execute("""
