@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { listCustomFields, deleteCustomField } from '../services/api';
+import { listCustomFields, deleteCustomField, getApiErrorMessage } from '../services/api';
+
+const TYPE_LABELS = {
+  text: 'Text',
+  number: 'Number',
+  alphanumeric: 'Letters & Digits',
+  date: 'Date',
+  datetime: 'Date & Time',
+};
 
 export default function CustomFieldList({ onFieldDeleted }) {
   const [fields, setFields] = useState([]);
   const [error, setError] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     loadFields();
@@ -24,13 +33,14 @@ export default function CustomFieldList({ onFieldDeleted }) {
     if (!window.confirm('Are you sure you want to delete this custom field? All values for this field will be deleted.')) {
       return;
     }
+    setDeleteError(null);
     try {
       await deleteCustomField(id);
       setFields(prev => prev.filter(field => field.id !== id));
       onFieldDeleted(id);
     } catch (error) {
       console.error('Error deleting custom field:', error);
-      alert('Failed to delete custom field. Please try again.');
+      setDeleteError(getApiErrorMessage(error, 'The field could not be deleted. Please try again.'));
     }
   };
 
@@ -44,12 +54,17 @@ export default function CustomFieldList({ onFieldDeleted }) {
 
   return (
     <div className="space-y-4">
+      {deleteError && (
+        <div role="alert" className="rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-sm px-4 py-3">
+          {deleteError}
+        </div>
+      )}
       {fields.map(field => (
         <div key={field.id} className="bg-gray-700 rounded-lg p-4">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-medium text-white">{field.name}</h3>
-              <p className="text-sm text-gray-400">Type: {field.field_type}</p>
+              <p className="text-sm text-gray-400">Type: {TYPE_LABELS[field.field_type] || field.field_type}</p>
               {Object.entries(field.validation_rules).length > 0 && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-400">Validation Rules:</p>

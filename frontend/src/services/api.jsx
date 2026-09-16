@@ -4,6 +4,18 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const API = axios.create({ baseURL: API_BASE_URL });
 
+// Turn an axios/FastAPI error into a message we can show the user.
+// FastAPI puts either a plain string or a list of validation errors in `detail`.
+export const getApiErrorMessage = (error, fallback) => {
+  const detail = error.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail[0]?.msg) {
+    return detail[0].msg.replace(/^Value error,\s*/i, '');
+  }
+  if (!error.response) return 'Could not reach the server. Please check that the backend is running.';
+  return fallback;
+};
+
 export const generateMembers = async (config) => {
   const response = await API.post('/generate', config);
   return response.data;

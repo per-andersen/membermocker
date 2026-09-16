@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
 
-VALID_FIELD_TYPES = ["string", "integer", "alphanumeric", "email", "phone", "date"]
+VALID_FIELD_TYPES = ["text", "number", "alphanumeric", "date", "datetime"]
 
 class CustomFieldDefinition(BaseModel):
     id: UUID = Field(default_factory=uuid4)
@@ -13,7 +13,7 @@ class CustomFieldDefinition(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
 
     @field_validator('field_type')
-    @classmethod 
+    @classmethod
     def validate_field_type(cls, v: str) -> str:
         if v not in VALID_FIELD_TYPES:
             raise ValueError(f'field_type must be one of: {", ".join(VALID_FIELD_TYPES)}')
@@ -23,6 +23,7 @@ class CustomFieldCreate(BaseModel):
     name: str = Field(..., min_length=1)
     field_type: str
     validation_rules: Dict[str, Any] = {}
+    default_value: Optional[str] = None
 
     @field_validator('field_type')
     @classmethod

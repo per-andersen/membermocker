@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { updateMember, deleteMember, downloadMembers } from '../services/api';
+import { updateMember, deleteMember, downloadMembers, getApiErrorMessage } from '../services/api';
 import MapView from './MapView';
 
 export default function MemberList({ members, onMemberDeleted, onMemberUpdated }) {
   const [editingMember, setEditingMember] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [editError, setEditError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', or 'map'
 
   const handleEdit = (member) => {
     setEditingMember(member.id);
+    setEditError(null);
     setEditForm({
       ...member,
       custom_fields: member.custom_fields || {}
@@ -37,13 +40,17 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
   };
 
   const handleSave = async (id) => {
+    setEditError(null);
+    setIsSaving(true);
     try {
       const updated = await updateMember(id, editForm);
       setEditingMember(null);
       onMemberUpdated(updated);
     } catch (error) {
       console.error('Error updating member:', error);
-      alert('Failed to update member. Please try again.');
+      setEditError(getApiErrorMessage(error, 'The changes could not be saved. Please try again.'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -131,66 +138,60 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
               {editingMember === member.id ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={editForm.first_name}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="First Name"
-                    />
-                    <input
-                      type="text"
-                      name="surname"
-                      value={editForm.surname}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Surname"
-                    />
-                    <input
-                      type="email"
-                      name="email"
-                      value={editForm.email}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Email"
-                    />
-                    <input
-                      type="tel"
-                      name="phone_number"
-                      value={editForm.phone_number}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Phone"
-                    />
-                    <input
-                      type="text"
-                      name="address"
-                      value={editForm.address}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm col-span-2"
-                      placeholder="Address"
-                    />
-                    <input
-                      type="date"
-                      name="birthday"
-                      value={editForm.birthday}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    />
-                    <input
-                      type="date"
-                      name="date_member_joined_group"
-                      value={editForm.date_member_joined_group}
-                      onChange={handleChange}
-                      className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    />
+                    {[
+                      { name: 'first_name', label: 'First Name', type: 'text' },
+                      { name: 'surname', label: 'Surname', type: 'text' },
+                      { name: 'email', label: 'Email', type: 'email' },
+                      { name: 'phone_number', label: 'Phone', type: 'tel' },
+                      { name: 'address', label: 'Address', type: 'text', span: true },
+                    ].map(({ name, label, type, span }) => (
+                      <div key={name} className={span ? 'col-span-2' : ''}>
+                        <label htmlFor={`edit-${name}-${member.id}`} className="block text-sm font-medium text-gray-300 mb-1">
+                          {label}
+                        </label>
+                        <input
+                          id={`edit-${name}-${member.id}`}
+                          type={type}
+                          name={name}
+                          value={editForm[name]}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                      </div>
+                    ))}
+                    <div>
+                      <label htmlFor={`edit-birthday-${member.id}`} className="block text-sm font-medium text-gray-300 mb-1">
+                        Birthday
+                      </label>
+                      <input
+                        id={`edit-birthday-${member.id}`}
+                        type="date"
+                        name="birthday"
+                        value={editForm.birthday}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`edit-joined-${member.id}`} className="block text-sm font-medium text-gray-300 mb-1">
+                        Date Joined
+                      </label>
+                      <input
+                        id={`edit-joined-${member.id}`}
+                        type="date"
+                        name="date_member_joined_group"
+                        value={editForm.date_member_joined_group}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      />
+                    </div>
                     {editForm.custom_fields && Object.entries(editForm.custom_fields).map(([fieldName, value]) => (
                       <div key={fieldName} className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                        <label htmlFor={`edit-custom-${fieldName}-${member.id}`} className="block text-sm font-medium text-gray-300 mb-1">
                           {fieldName}
                         </label>
                         <input
+                          id={`edit-custom-${fieldName}-${member.id}`}
                           type="text"
                           name={`custom_${fieldName}`}
                           value={value || ''}
@@ -200,6 +201,11 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                       </div>
                     ))}
                   </div>
+                  {editError && (
+                    <div role="alert" className="rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-sm px-4 py-3">
+                      {editError}
+                    </div>
+                  )}
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setEditingMember(null)}
@@ -209,9 +215,12 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                     </button>
                     <button
                       onClick={() => handleSave(member.id)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      disabled={isSaving}
+                      className={`px-4 py-2 text-white rounded-lg transition-colors text-sm ${
+                        isSaving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
                     >
-                      Save
+                      {isSaving ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </div>
@@ -234,7 +243,11 @@ export default function MemberList({ members, onMemberDeleted, onMemberUpdated }
                             {Object.entries(member.custom_fields).map(([fieldName, value]) => (
                               <div key={fieldName}>
                                 <span className="text-gray-400">{fieldName}:</span>{' '}
-                                <span className="text-gray-300">{value}</span>
+                                {value ? (
+                                  <span className="text-gray-300">{value}</span>
+                                ) : (
+                                  <span className="text-gray-500 italic">not set</span>
+                                )}
                               </div>
                             ))}
                           </div>
