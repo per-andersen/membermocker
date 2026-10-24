@@ -1,27 +1,24 @@
 import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Leaflet guesses its icon URLs from the CSS path, which breaks once bundled
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 export default function MapView({ members }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
   useEffect(() => {
-    // Load OpenStreetMap script and styles if not already loaded
-    if (!window.L) {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet/dist/leaflet.js';
-      script.async = true;
-
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet/dist/leaflet.css';
-
-      document.head.appendChild(link);
-      document.body.appendChild(script);
-
-      script.onload = initializeMap;
-    } else {
-      initializeMap();
-    }
+    initializeMap();
 
     function initializeMap() {
       if (!mapRef.current) return;
@@ -31,7 +28,6 @@ export default function MapView({ members }) {
         mapInstanceRef.current.remove();
       }
 
-      const L = window.L;
       // Initialize map with default view
       const map = L.map(mapRef.current).setView([0, 0], 2);
       mapInstanceRef.current = map;
