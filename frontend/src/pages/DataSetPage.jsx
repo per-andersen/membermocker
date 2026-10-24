@@ -11,10 +11,6 @@ export default function DataSetPage() {
   const [showCustomFields, setShowCustomFields] = useState(false);
   const [fieldListVersion, setFieldListVersion] = useState(0);
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
-
   const loadMembers = async () => {
     try {
       const data = await listMembers();
@@ -27,6 +23,12 @@ export default function DataSetPage() {
       }
     }
   };
+
+  useEffect(() => {
+    // State is only set after the awaited fetch, so this cannot cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadMembers();
+  }, []);
 
   const handleGenerate = () => {
     // Refetch so ordering matches what a page reload would show

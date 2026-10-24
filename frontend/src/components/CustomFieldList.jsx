@@ -14,10 +14,6 @@ export default function CustomFieldList({ onFieldDeleted }) {
   const [error, setError] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
 
-  useEffect(() => {
-    loadFields();
-  }, []);
-
   const loadFields = async () => {
     try {
       const data = await listCustomFields();
@@ -28,6 +24,12 @@ export default function CustomFieldList({ onFieldDeleted }) {
       setError('Failed to load custom fields. Please try again.');
     }
   };
+
+  useEffect(() => {
+    // State is only set after the awaited fetch, so this cannot cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadFields();
+  }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this custom field? All values for this field will be deleted.')) {

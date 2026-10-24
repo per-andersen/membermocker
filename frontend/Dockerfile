@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim as builder
+FROM node:24-slim AS builder
 
 # Install wget and curl for healthchecks (useful for dev mode)
 RUN apt-get update && \

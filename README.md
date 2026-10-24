@@ -46,7 +46,7 @@ See [OLLAMA.md](OLLAMA.md) for detailed instructions on setting up the Ollama co
 
 #### Local Development
 - Python 3.12 or higher
-- Node.js 18 or higher
+- Node.js 22.12 or higher (24 LTS recommended)
 - npm or yarn
 - Git
 - UV package installer (`pip install uv`)

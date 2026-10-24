@@ -197,6 +197,9 @@ Default-value semantics (enforced by tests — keep them intact):
 
 ## Frontend Conventions
 
+- **Tailwind v4 is configured in CSS**, not JS: plugins go in `src/index.css` via
+  `@plugin` (currently `@tailwindcss/forms`, which supplies input borders/padding). There is
+  no `tailwind.config.js` — v4 ignores it unless referenced with `@config`, so don't add one.
 - **No `alert()` for errors.** Errors render inline in a red `role="alert"` box within the
   form that failed. Route every caught API error through `getApiErrorMessage(error, fallback)`
   from `services/api.jsx` — it unwraps FastAPI's `detail` (string or validation-error list)
@@ -209,7 +212,10 @@ Default-value semantics (enforced by tests — keep them intact):
 - Empty values display as italic gray *not set*, never as a bare `name:` with nothing after.
 - After generation, `DataSetPage` refetches the member list rather than appending, so
   ordering always matches a page reload.
-- Leaflet (`MapView.jsx`): the bounds API is `bounds.isValid()` — `isEmpty()` does not exist
+- Leaflet (`MapView.jsx`) is an npm dependency pinned to an exact version and bundled by Vite —
+  never load it (or anything else) from unpkg or another CDN. Bundling breaks Leaflet's
+  marker-icon URL detection, so `MapView.jsx` imports the icon images and sets them on
+  `L.Icon.Default`; keep that when touching the map. The bounds API is `bounds.isValid()` — `isEmpty()` does not exist
   and fails silently as a page error, leaving the map at world zoom. `fitBounds` uses
   `maxZoom` + padding so a single marker doesn't over-zoom.
 - Backend error `detail` strings are shown verbatim to end users. When writing a new
