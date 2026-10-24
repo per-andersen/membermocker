@@ -45,7 +45,7 @@ export default function MapView({ members }) {
         const bounds = L.latLngBounds();
         members.forEach(member => {
           if (member.latitude && member.longitude) {
-            const marker = L.marker([member.latitude, member.longitude])
+            L.marker([member.latitude, member.longitude])
               .bindPopup(`
                 <b>${member.first_name} ${member.surname}</b><br>
                 ${member.address}<br>
