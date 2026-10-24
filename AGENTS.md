@@ -197,6 +197,9 @@ Default-value semantics (enforced by tests — keep them intact):
 
 ## Frontend Conventions
 
+- **Tailwind v4 is configured in CSS**, not JS: plugins go in `src/index.css` via
+  `@plugin` (currently `@tailwindcss/forms`, which supplies input borders/padding). There is
+  no `tailwind.config.js` — v4 ignores it unless referenced with `@config`, so don't add one.
 - **No `alert()` for errors.** Errors render inline in a red `role="alert"` box within the
   form that failed. Route every caught API error through `getApiErrorMessage(error, fallback)`
   from `services/api.jsx` — it unwraps FastAPI's `detail` (string or validation-error list)
